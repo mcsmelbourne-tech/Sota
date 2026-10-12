@@ -289,14 +289,22 @@ class ThetaDataSource:
         return chain
 
     # ------------------------------------------------------------------ closes
+    MAX_EOD_SPAN_DAYS = 365  # server limit per stock_history_eod request
+
     def fetch_closes(self, underlying: str, start: date, end: date) -> list[tuple[date, float]]:
-        rows = self._rows("stock_history_eod", symbol=underlying, start_date=start, end_date=end)
         out: list[tuple[date, float]] = []
-        for row in rows:
-            d = _row_date(row)
-            close = _num(row.get("close"))
-            if d is not None and close:
-                out.append((d, close))
+        chunk_start = start
+        while chunk_start <= end:
+            chunk_end = min(chunk_start + timedelta(days=self.MAX_EOD_SPAN_DAYS - 1), end)
+            rows = self._rows(
+                "stock_history_eod", symbol=underlying, start_date=chunk_start, end_date=chunk_end
+            )
+            for row in rows:
+                d = _row_date(row)
+                close = _num(row.get("close"))
+                if d is not None and close:
+                    out.append((d, close))
+            chunk_start = chunk_end + timedelta(days=1)
         return sorted(out)
 
     def _closes(self, underlying: str) -> list[tuple[date, float]]:

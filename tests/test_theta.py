@@ -160,6 +160,22 @@ def test_closes_and_trading_days(tmp_path):
     assert src.trading_days("AAPL", date(2024, 11, 1), ASOF) == [date(2024, 11, 1), ASOF]
 
 
+def test_fetch_closes_chunks_long_ranges(tmp_path):
+    """stock_history_eod rejects spans over 365 days; long ranges must be split."""
+    transport = FakeTransport("library")
+    src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
+    src.fetch_closes("AAPL", date(2024, 5, 1), date(2025, 10, 10))
+    calls = [p for e, p in transport.calls if e == "stock_history_eod"]
+    assert len(calls) == 2
+    assert all((p["end_date"] - p["start_date"]).days < 365 for p in calls)
+    assert calls[0]["start_date"] == date(2024, 5, 1) and calls[-1]["end_date"] == date(
+        2025, 10, 10
+    )
+    assert calls[1]["start_date"] == calls[0]["end_date"] + timedelta(
+        days=1
+    )  # contiguous, no overlap
+
+
 def test_cache_only_source_needs_no_credentials(tmp_path):
     src = ThetaDataSource(ThetaSettings(transport="library"), tmp_path)
     assert src._transport is None  # created lazily on first network call
