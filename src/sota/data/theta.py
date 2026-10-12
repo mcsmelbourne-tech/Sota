@@ -116,6 +116,7 @@ class ThetaDataSource:
         self.rate = rate
         self.max_dte = max_dte
         self._closes_cache: dict[str, list[tuple[date, float]]] = {}
+        self._unavailable: set[str] = set()
 
     # ------------------------------------------------------------------ transport
     @property
@@ -123,7 +124,9 @@ class ThetaDataSource:
         if self._transport is None:
             s = self.settings
             if s.transport == "library":
-                self._transport = LibraryTransport(s.api_key.get_secret_value() if s.api_key else None)
+                self._transport = LibraryTransport(
+                    s.api_key.get_secret_value() if s.api_key else None
+                )
             else:
                 self._transport = RestTransport(s.base_url, s.timeout_s)
         return self._transport
@@ -131,14 +134,31 @@ class ThetaDataSource:
     def _rows(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
         return self.transport.fetch(endpoint, **params)
 
+    def _optional_rows(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
+        """Tier-gated endpoints (greeks: Standard+, OI: Value+) are best-effort: warn once, then skip."""
+        if endpoint in self._unavailable:
+            return []
+        try:
+            return self._rows(endpoint, **params)
+        except Exception as exc:  # noqa: BLE001 - permission/transport errors must not block the chain
+            log.warning("theta %s unavailable (%s); continuing without it", endpoint, exc)
+            self._unavailable.add(endpoint)
+            return []
+
     # ------------------------------------------------------------------ chains
     def fetch_chain(self, underlying: str, asof: date) -> Chain | None:
-        day = {"symbol": underlying, "expiration": "*", "start_date": asof, "end_date": asof}
+        day = {
+            "symbol": underlying,
+            "expiration": "*",
+            "start_date": asof,
+            "end_date": asof,
+            "max_dte": self.max_dte,
+        }
         eod = self._rows("option_history_eod", **day)
         if not eod:
             return None
-        greeks = self._rows("option_history_greeks_eod", **day)
-        oi = self._rows("option_history_open_interest", **day)
+        greeks = self._optional_rows("option_history_greeks_eod", **day)
+        oi = self._optional_rows("option_history_open_interest", **day)
 
         def key(row: dict[str, Any]) -> tuple[str, float, str] | None:
             right = _RIGHT.get(str(row.get("right", "")).lower())

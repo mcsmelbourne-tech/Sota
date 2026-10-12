@@ -64,10 +64,15 @@ class ChainStore:
             return None
         quotes: dict[OptionContract, Quote] = {}
         for r in df.iter_rows(named=True):
-            contract = OptionContract(underlying, date.fromisoformat(r["expiry"]), float(r["strike"]), Right(r["right"]))
+            contract = OptionContract(
+                underlying, date.fromisoformat(r["expiry"]), float(r["strike"]), Right(r["right"])
+            )
             quotes[contract] = Quote(
-                bid=float(r["bid"]), ask=float(r["ask"]), iv=r["iv"],
-                open_interest=r["open_interest"], volume=r["volume"],
+                bid=float(r["bid"]),
+                ask=float(r["ask"]),
+                iv=r["iv"],
+                open_interest=r["open_interest"],
+                volume=r["volume"],
             )
         return Chain(underlying, asof, float(df["spot"][0]), quotes, rate=rate)
 
@@ -88,4 +93,6 @@ class ChainStore:
         if not path.exists():
             return []
         df = pl.read_parquet(path).sort("date")
-        return [(date.fromisoformat(d), float(c)) for d, c in zip(df["date"], df["close"], strict=True)]
+        return [
+            (date.fromisoformat(d), float(c)) for d, c in zip(df["date"], df["close"], strict=True)
+        ]

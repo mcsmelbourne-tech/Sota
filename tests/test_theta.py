@@ -123,6 +123,37 @@ def test_chain_is_cached_to_parquet(tmp_path):
     assert again is not None and again.spot == first.spot and set(again.quotes) == set(first.quotes)
 
 
+class TierGatedTransport(FakeTransport):
+    """Free/Value tiers: greeks (and on Free, open interest) raise instead of returning rows."""
+
+    def __init__(self, style: str, gated: tuple[str, ...]) -> None:
+        super().__init__(style)
+        self.gated = gated
+
+    def fetch(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
+        self.calls.append((endpoint, params))
+        if endpoint in self.gated:
+            raise PermissionError(f"{endpoint}: subscription tier does not include this endpoint")
+        return list(self.rows[endpoint])
+
+
+def test_lower_tiers_degrade_gracefully(tmp_path):
+    transport = TierGatedTransport(
+        "library", ("option_history_greeks_eod", "option_history_open_interest")
+    )
+    src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
+    chain = src.get_chain("AAPL", ASOF)
+    assert chain is not None
+    assert chain.spot == 224.0, "spot falls back to the stock EOD close when greeks are unavailable"
+    assert all(q.iv is None and q.open_interest is None for q in chain.quotes.values())
+    chain.ensure_greeks()
+    assert all(q.iv is not None for q in chain.quotes.values()), "IV is solved locally from mid"
+    src.get_chain("AAPL", ASOF + timedelta(days=1))
+    gated_calls = [e for e, _ in transport.calls if e in transport.gated]
+    assert len(gated_calls) == 2, "a gated endpoint is tried once per session, not once per day"
+    assert all(p.get("max_dte") == 200 for e, p in transport.calls if e.startswith("option_"))
+
+
 def test_closes_and_trading_days(tmp_path):
     src = ThetaDataSource(ThetaSettings(), tmp_path, transport=FakeTransport("rest"))
     assert src.get_closes("AAPL", ASOF, 5) == [221.0, 224.0]

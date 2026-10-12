@@ -42,7 +42,12 @@ class SyntheticChainSource:
         self.dates = weekdays(start, days + 30)  # extra history for realized vol
         self.start = self.dates[30]
         self.max_dte = max_dte
-        self.skew, self.curvature, self.term_slope, self.spread_frac = skew, curvature, term_slope, spread_frac
+        self.skew, self.curvature, self.term_slope, self.spread_frac = (
+            skew,
+            curvature,
+            term_slope,
+            spread_frac,
+        )
         self.closes: dict[str, dict[date, float]] = {}
         self.iv_level: dict[str, dict[date, float]] = {}
         for i, u in enumerate(underlyings):
@@ -51,8 +56,17 @@ class SyntheticChainSource:
             cl: dict[date, float] = {}
             lv: dict[date, float] = {}
             for d in self.dates:
-                iv = max(0.08, iv * math.exp(vol_of_vol / math.sqrt(252) * self.rng.standard_normal() - 0.5 * (iv - base_vol)))
-                s *= math.exp((drift - 0.5 * iv * iv) / 252 + iv / math.sqrt(252) * self.rng.standard_normal())
+                iv = max(
+                    0.08,
+                    iv
+                    * math.exp(
+                        vol_of_vol / math.sqrt(252) * self.rng.standard_normal()
+                        - 0.5 * (iv - base_vol)
+                    ),
+                )
+                s *= math.exp(
+                    (drift - 0.5 * iv * iv) / 252 + iv / math.sqrt(252) * self.rng.standard_normal()
+                )
                 cl[d] = s
                 lv[d] = iv
             self.closes[u] = cl
@@ -89,8 +103,11 @@ class SyntheticChainSource:
                     mid = bsm_price(spot, strike, tte, 0.0, 0.0, iv, right.is_call)
                     hs = max(0.01, self.spread_frac * mid)
                     quotes[OptionContract(underlying, expiry, strike, right)] = Quote(
-                        bid=max(mid - hs, 0.0), ask=mid + hs, iv=iv,
-                        open_interest=int(1000 * math.exp(-abs(k) / 8)), volume=int(100 * math.exp(-abs(k) / 6)),
+                        bid=max(mid - hs, 0.0),
+                        ask=mid + hs,
+                        iv=iv,
+                        open_interest=int(1000 * math.exp(-abs(k) / 8)),
+                        volume=int(100 * math.exp(-abs(k) / 6)),
                     )
         return Chain(underlying, asof, spot, quotes)
 

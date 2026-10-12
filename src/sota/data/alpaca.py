@@ -14,7 +14,9 @@ from sota.models import Chain, OptionContract, Quote
 
 def _creds(settings: AlpacaSettings) -> tuple[str, str]:
     if settings.api_key is None or settings.secret_key is None:
-        raise RuntimeError("Alpaca credentials missing: set SOTA_ALPACA__API_KEY / SOTA_ALPACA__SECRET_KEY")
+        raise RuntimeError(
+            "Alpaca credentials missing: set SOTA_ALPACA__API_KEY / SOTA_ALPACA__SECRET_KEY"
+        )
     return settings.api_key.get_secret_value(), settings.secret_key.get_secret_value()
 
 
@@ -33,7 +35,9 @@ class AlpacaChainSource:
     def spot(self, underlying: str) -> float:
         from alpaca.data.requests import StockLatestTradeRequest
 
-        trades = self.stocks.get_stock_latest_trade(StockLatestTradeRequest(symbol_or_symbols=underlying))
+        trades = self.stocks.get_stock_latest_trade(
+            StockLatestTradeRequest(symbol_or_symbols=underlying)
+        )
         return float(trades[underlying].price)
 
     def get_chain(self, underlying: str, asof: date | None = None) -> Chain | None:
