@@ -63,16 +63,16 @@ def resolve_size(
     bounds: dict[str, float] = {
         "target risk": limits.target_risk_frac * nav / risk_unit,
         "capital cap": (limits.nav_frac_cap * nav / cap_unit) if cap_unit > 0 else math.inf,
-        # Worst-case |delta| of any defined-risk structure is ~1 share per contract, so the
-        # notional is the exposure the account (or its hedge) may eventually have to carry.
-        "notional cap": limits.max_notional_frac * nav / (spot * MULTIPLIER),
         "underlying risk cap": (
             limits.risk_cap_per_underlying * nav - risk.scenario_risk_by_underlying.get(u, 0.0)
         )
         / risk_unit,
         "total risk cap": (limits.risk_cap_total * nav - risk.scenario_risk_total) / risk_unit,
     }
-    if not pkg.hedged:
+    if limits.hedge and pkg.hedged:
+        # The share hedge can grow to ~1 share per contract, so bound it by the notional.
+        bounds["notional cap"] = limits.max_notional_frac * nav / (spot * MULTIPLIER)
+    else:
         dd_unit = abs(pkg.delta) * spot * MULTIPLIER
         if dd_unit > 0.0:
             bounds["net delta cap"] = (

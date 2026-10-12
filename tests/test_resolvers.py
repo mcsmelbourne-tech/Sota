@@ -126,6 +126,38 @@ def test_size_resolver_floors_risk_at_the_spread(chain, limits):
     assert res.accepted and res.units * res.risk_per_unit <= limits.target_risk_frac * 1e6
 
 
+def test_notional_cap_only_guards_hedged_packages(chain):
+    from sota.config import RiskLimits
+
+    nav = 20_000.0  # one contract of a ~$100 underlying is half this account's notional cap
+    straddle = resolve_package(chain, "ls", Side.LONG, Tenor.T8_30)
+    hedged = resolve_size(
+        straddle,
+        chain.spot,
+        0.25,
+        RiskLimits(max_notional_frac=0.1),
+        PortfolioRisk(nav=nav),
+        chain.asof,
+    )
+    assert not hedged.accepted and "notional" in hedged.binding
+
+    unhedged = resolve_size(
+        straddle,
+        chain.spot,
+        0.25,
+        RiskLimits(hedge=False, max_notional_frac=0.1, target_risk_frac=0.05),
+        PortfolioRisk(nav=nav),
+        chain.asof,
+    )
+    assert "notional" not in unhedged.binding, "with hedging off the notional cap does not apply"
+
+    call = resolve_package(chain, "ol", Side.LONG, Tenor.T8_30)
+    tiny = resolve_size(
+        call, chain.spot, 0.25, RiskLimits(net_delta_cap=0.01), PortfolioRisk(nav=nav), chain.asof
+    )
+    assert not tiny.accepted and "net delta" in tiny.binding
+
+
 def test_hedge_band():
     assert hedge_trade(4_000.0, 0, 100.0, 1_000_000.0, 0.005) == 0  # inside the $5,000 band
     trade = hedge_trade(12_000.0, 0, 100.0, 1_000_000.0, 0.005)

@@ -111,6 +111,96 @@ def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
 
 
 @app.command()
+def sizing(
+    nav: float = typer.Option(..., help="Account size to size for"),
+    asof: DateOpt = None,
+    synthetic: bool = False,
+) -> None:
+    """What the resolvers would trade at this account size: units per family/tenor and why not."""
+    import math
+
+    from sota.models import Side, Tenor
+    from sota.pipeline import DEFAULT_ATM_IV, atm_iv_map
+    from sota.resolvers.contract import resolve_package
+    from sota.resolvers.size import resolve_size
+    from sota.risk import PortfolioRisk
+    from sota.strategies.families import FAMILIES
+
+    d = _date(asof)
+    s = _settings("backtest" if d < date.today() or synthetic else None)
+    source = build_source(s, synthetic=synthetic)
+    if asof is None and not synthetic:  # default to the most recent cached/available day
+        for back in range(10):
+            if load_chains(source, s.universe[:1], d - timedelta(days=back), s.limits):
+                d = d - timedelta(days=back)
+                break
+    chains = load_chains(source, s.universe, d, s.limits)
+    atm_iv = atm_iv_map(compute_state(source, chains, d))
+    lim = s.limits
+    hedging = "on" if lim.hedge else "off"
+    table = Table(
+        title=f"Sizing at NAV ${nav:,.0f} on {d} (risk {lim.target_risk_frac:.1%}/package, "
+        f"capital cap {lim.nav_frac_cap:.0%}, hedging {hedging})"
+    )
+    for col in (
+        "underlying",
+        "family",
+        "tenor",
+        "premium",
+        "max loss",
+        "risk/unit",
+        "units",
+        "binding",
+    ):
+        table.add_column(col, justify="right" if col not in ("binding", "family") else "left")
+    tradable = total = 0
+    for u, chain in chains.items():
+        for code, spec in FAMILIES.items():
+            side = Side.LONG
+            for tenor in (Tenor.T8_30, Tenor.T31_90):
+                pkg = resolve_package(
+                    chain,
+                    code,
+                    side,
+                    tenor,
+                    min_dte=lim.force_close_dte + 1,
+                    max_rel_half_spread=lim.max_rel_half_spread,
+                )
+                total += 1
+                if pkg is None:
+                    table.add_row(
+                        u,
+                        f"{code} {spec.name}",
+                        tenor.value,
+                        "-",
+                        "-",
+                        "-",
+                        "0",
+                        "no liquid contracts",
+                    )
+                    continue
+                res = resolve_size(
+                    pkg, chain.spot, atm_iv.get(u, DEFAULT_ATM_IV), lim, PortfolioRisk(nav=nav), d
+                )
+                tradable += res.accepted
+                ml = "unbounded" if pkg.max_loss is None else f"${pkg.max_loss * 100:,.0f}"
+                style = "" if res.accepted else "dim"
+                table.add_row(
+                    u,
+                    f"{code} {spec.name}",
+                    tenor.value,
+                    f"${pkg.net_premium * 100:+,.0f}",
+                    ml,
+                    f"${res.risk_per_unit:,.0f}" if math.isfinite(res.risk_per_unit) else "-",
+                    str(res.units),
+                    res.binding,
+                    style=style,
+                )
+    console.print(table)
+    console.print(f"{tradable}/{total} family-tenor combinations fit at least 1 contract")
+
+
+@app.command()
 def fetch(
     start: str,
     end: str,

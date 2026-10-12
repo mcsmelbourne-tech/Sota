@@ -278,6 +278,8 @@ class TradingEnv:
         return opened
 
     def rebalance_hedges(self, chains: dict[str, Chain], asof: date, nav: float) -> None:
+        if not self.limits.hedge:
+            return
         for u, chain in chains.items():
             hedged = [
                 p for p in self.open_positions if p.package.underlying == u and p.package.hedged

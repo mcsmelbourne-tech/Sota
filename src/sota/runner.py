@@ -191,8 +191,10 @@ class Runner:
         asof = asof or date.today()
         chains = load_chains(self.source, self.settings.universe, asof, self.limits)
         acct = self.broker.account()
+        # A paper account can be sized as if it were the (smaller) real account.
+        nav = min(acct.nav, self.settings.sizing_nav) if self.settings.sizing_nav else acct.nav
         features = compute_state(self.source, chains, asof)
-        report = RunReport(asof, self.mode, acct.nav, features)
+        report = RunReport(asof, self.mode, nav, features)
 
         positions = self.journal.list_positions(self.mode, "open")
         self.manage_exits(positions, chains, asof, report)
@@ -204,7 +206,7 @@ class Runner:
             v = p.package.value(chain) if chain is not None else None
             if v is not None:
                 marks[p.id] = v
-        view = PortfolioView(asof, acct.nav, acct.cash, positions, marks)
+        view = PortfolioView(asof, nav, acct.cash, positions, marks)
         atm_iv = atm_iv_map(features)
 
         report.proposals = self.selector.propose(features, view)
@@ -212,7 +214,7 @@ class Runner:
             report.proposals,
             chains,
             atm_iv,
-            acct.nav,
+            nav,
             positions,
             self.journal.hedge_shares(self.mode),
             self.limits,
@@ -220,8 +222,8 @@ class Runner:
         report.chosen = self.selector.decide(report.candidates, view, self.limits.max_order_lines)
         self.execute(report.chosen, asof, report)
 
-        if not self.is_live:
-            self.rebalance_hedges(positions + report.opened, chains, acct.nav, report)
+        if not self.is_live and self.limits.hedge:
+            self.rebalance_hedges(positions + report.opened, chains, nav, report)
 
         self.journal.record_nav(asof, self.mode, acct.nav, acct.cash)
         self.journal.record_decision(

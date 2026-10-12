@@ -60,6 +60,24 @@ def test_threshold_selector_runs(source):
     assert all(v > 0 for v in result.nav_values)
 
 
+def test_hedging_can_be_disabled(source):
+    env = TradingEnv(source, ["AAA", "BBB"], RiskLimits(hedge=False), Costs(), 1_000_000)
+    result = env.run(_dates(source, 30), OneOfEach())
+    assert len(result.positions) == 4
+    assert not any(t.action == "hedge" for t in result.trades)
+    assert not env.hedge_shares
+
+
+def test_small_account_trades_whole_contracts(source):
+    limits = RiskLimits(hedge=False, target_risk_frac=0.01)
+    env = TradingEnv(source, ["AAA", "BBB"], limits, Costs(), 25_000)
+    result = env.run(_dates(source, 30), OneOfEach())
+    assert result.positions, "a $25k account should still fit some 1-contract structures"
+    for p in result.positions:
+        assert p.units >= 1
+        assert p.units * p.package.max_loss * 100 <= limits.nav_frac_cap * 25_000 * (1 + 1e-9)
+
+
 def test_oracle_is_profitable_on_synthetic(source):
     env = TradingEnv(source, ["AAA", "BBB"], RiskLimits(), Costs(), 1_000_000)
     result = env.run(_dates(source, 50), HindsightOracle(source))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import date
 
 import pytest
@@ -7,6 +8,14 @@ import pytest
 from sota.config import RiskLimits, Settings
 from sota.data.synthetic import SyntheticChainSource
 from sota.models import Chain
+
+
+@pytest.fixture(autouse=True)
+def _no_sota_env(monkeypatch):
+    """Tests must not pick up SOTA_* variables exported in the developer's shell."""
+    for key in list(os.environ):
+        if key.startswith("SOTA_"):
+            monkeypatch.delenv(key, raising=False)
 
 
 @pytest.fixture(scope="session")
