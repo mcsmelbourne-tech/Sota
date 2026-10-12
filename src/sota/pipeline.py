@@ -10,6 +10,7 @@ from sota.config import RiskLimits
 from sota.data.base import ChainSource
 from sota.features import RV_WINDOW, MarketFeatures, compute_features
 from sota.models import Chain, Position
+from sota.pricing.surface import smooth_chain
 from sota.resolvers.contract import resolve_package
 from sota.resolvers.size import resolve_size
 from sota.risk import build_portfolio_risk
@@ -18,13 +19,23 @@ from sota.selectors.base import PricedCandidate, Proposal
 DEFAULT_ATM_IV = 0.30
 
 
-def load_chains(source: ChainSource, universe: Sequence[str], asof: date) -> dict[str, Chain]:
+def prepare_chain(chain: Chain, limits: RiskLimits | None = None) -> Chain:
+    """Solve greeks and, if enabled, replace noisy per-contract marks with smile-fitted values."""
+    chain.ensure_greeks()
+    if limits is not None and limits.smooth_surface and not chain.smoothed:
+        smooth_chain(chain)
+        chain.smoothed = True
+    return chain
+
+
+def load_chains(
+    source: ChainSource, universe: Sequence[str], asof: date, limits: RiskLimits | None = None
+) -> dict[str, Chain]:
     chains: dict[str, Chain] = {}
     for u in universe:
         chain = source.get_chain(u, asof)
         if chain is not None and chain.quotes:
-            chain.ensure_greeks()
-            chains[u] = chain
+            chains[u] = prepare_chain(chain, limits)
     return chains
 
 
@@ -63,7 +74,9 @@ def price_candidates(
     limits: RiskLimits,
 ) -> list[PricedCandidate]:
     """Resolve each open-proposal into contracts and a size; drop anything the resolvers reject."""
-    risk = build_portfolio_risk(nav, positions, chains, atm_iv, hedge_shares, limits.iv_shock)
+    risk = build_portfolio_risk(
+        nav, positions, chains, atm_iv, hedge_shares, limits.iv_shock, limits.risk_sigma
+    )
     out: list[PricedCandidate] = []
     per_u: dict[str, int] = {}
     for p in proposals:
@@ -73,11 +86,19 @@ def price_candidates(
         if chain is None or per_u.get(p.underlying, 0) >= limits.candidates_per_underlying:
             continue
         pkg = resolve_package(
-            chain, p.family, p.side, p.tenor, p.coords, min_dte=limits.force_close_dte + 1
+            chain,
+            p.family,
+            p.side,
+            p.tenor,
+            p.coords,
+            min_dte=limits.force_close_dte + 1,
+            max_rel_half_spread=limits.max_rel_half_spread,
         )
         if pkg is None:
             continue
-        size = resolve_size(pkg, chain.spot, atm_iv.get(p.underlying, DEFAULT_ATM_IV), limits, risk)
+        size = resolve_size(
+            pkg, chain.spot, atm_iv.get(p.underlying, DEFAULT_ATM_IV), limits, risk, chain.asof
+        )
         if not size.accepted:
             continue
         per_u[p.underlying] = per_u.get(p.underlying, 0) + 1

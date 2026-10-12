@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from sota.models import Chain, Leg, OptionContract, Package, Right, Side, Tenor
+from sota.pricing.surface import leg_is_liquid
 from sota.strategies.families import FAMILIES, normalize_coords
 
 
@@ -20,14 +21,18 @@ def resolve_expiry(chain: Chain, tenor: Tenor, min_dte: int = 2) -> date | None:
 
 
 def resolve_strike(
-    chain: Chain, expiry: date, right: Right, target_delta: float
+    chain: Chain,
+    expiry: date,
+    right: Right,
+    target_delta: float,
+    max_rel_half_spread: float = 0.5,
 ) -> OptionContract | None:
-    """Contract at `expiry`/`right` whose |delta| is nearest the target, among valid quotes."""
+    """Contract at `expiry`/`right` whose |delta| is nearest the target, among liquid quotes."""
     best: OptionContract | None = None
     best_err = float("inf")
     for c in chain.contracts(expiry, right):
         q = chain.quote(c)
-        if q is None or not q.is_valid or q.delta is None:
+        if q is None or q.delta is None or not leg_is_liquid(c, q, max_rel_half_spread):
             continue
         err = abs(abs(q.delta) - target_delta)
         if err < best_err:
@@ -54,6 +59,7 @@ def resolve_package(
     coords: dict[str, float] | None = None,
     *,
     min_dte: int = 2,
+    max_rel_half_spread: float = 0.5,
 ) -> Package | None:
     """Map a strategy decision (u, f, omega, theta, kappa) to exact contracts with per-share pricing."""
     spec = FAMILIES.get(family)
@@ -68,7 +74,7 @@ def resolve_package(
     leg_specs = spec.legs(side, coords)
     merged: dict[OptionContract, int] = {}
     for ls in leg_specs:
-        c = resolve_strike(chain, expiry, ls.right, ls.delta)
+        c = resolve_strike(chain, expiry, ls.right, ls.delta, max_rel_half_spread)
         if c is None:
             return None
         merged[c] = merged.get(c, 0) + ls.ratio
@@ -82,16 +88,18 @@ def resolve_package(
     ]
     net_premium = delta = gamma = vega = theta = half_spread = 0.0
     leg_deltas: list[float] = []
+    leg_ivs: list[float] = []
     for leg in legs:
         q = chain.quote(leg.contract)
         assert q is not None and q.has_greeks
-        net_premium += leg.ratio * q.mid
+        net_premium += leg.ratio * q.mark
         delta += leg.ratio * q.delta  # type: ignore[operator]
         gamma += leg.ratio * q.gamma  # type: ignore[operator]
         vega += leg.ratio * q.vega  # type: ignore[operator]
         theta += leg.ratio * q.theta  # type: ignore[operator]
         half_spread += abs(leg.ratio) * q.half_spread
         leg_deltas.append(abs(q.delta))  # type: ignore[arg-type]
+        leg_ivs.append(q.iv)  # type: ignore[arg-type]
 
     return Package(
         family=family,
@@ -110,4 +118,5 @@ def resolve_package(
         max_loss=max_loss_per_share(legs, net_premium),
         half_spread=half_spread,
         leg_deltas=leg_deltas,
+        leg_ivs=leg_ivs,
     )

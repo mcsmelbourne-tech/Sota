@@ -255,7 +255,13 @@ class TradingEnv:
             chain = chains[cand.package.underlying]
             nav = self.mark_nav(chains)
             risk = build_portfolio_risk(
-                nav, self.positions, chains, atm_iv, self.hedge_shares, self.limits.iv_shock
+                nav,
+                self.positions,
+                chains,
+                atm_iv,
+                self.hedge_shares,
+                self.limits.iv_shock,
+                self.limits.risk_sigma,
             )
             size = resolve_size(
                 cand.package,
@@ -263,6 +269,7 @@ class TradingEnv:
                 atm_iv.get(chain.underlying, DEFAULT_ATM_IV),
                 self.limits,
                 risk,
+                asof,
             )
             if not size.accepted:
                 continue
@@ -294,7 +301,7 @@ class TradingEnv:
                 self.cash -= abs(shares) * chains[u].spot * self.costs.borrow_rate / 365.0
 
     def step(self, asof: date, selector: Selector | None) -> StepResult:
-        chains = load_chains(self.source, self.universe, asof)
+        chains = load_chains(self.source, self.universe, asof, self.limits)
         for u, chain in chains.items():
             self._last_spot[u] = chain.spot
 

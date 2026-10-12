@@ -96,6 +96,36 @@ def test_build_portfolio_risk_counts(chain, limits):
     assert risk.scenario_risk_total > 0
 
 
+def test_repricing_risk_exceeds_taylor_for_short_gamma(chain, limits):
+    """Full repricing must see the convexity loss a 1-sigma Taylor expansion nets out."""
+    from sota.risk import package_scenario_risk, scenario_risk_per_share
+
+    ic = resolve_package(chain, "ic", Side.LONG, Tenor.T8_30)
+    taylor = scenario_risk_per_share(ic.delta, ic.gamma, ic.vega, ic.theta, chain.spot, 0.25, 0.10)
+    repriced = package_scenario_risk(ic, chain.spot, 0.25, 0.10, asof=chain.asof, sigma_mult=2.0)
+    assert repriced > taylor > 0
+    assert repriced <= ic.max_loss, "a one-day scenario cannot lose more than the max loss"
+
+    ls = resolve_package(chain, "ls", Side.LONG, Tenor.T8_30)
+    long_gamma = package_scenario_risk(ls, chain.spot, 0.25, 0.10, asof=chain.asof, sigma_mult=2.0)
+    assert 0 < long_gamma <= abs(ls.net_premium), "a long straddle can only lose its premium"
+
+    # Without a date (or without leg IVs) the Taylor estimate is used.
+    assert package_scenario_risk(ic, chain.spot, 0.25, 0.10) == pytest.approx(taylor)
+
+
+def test_size_resolver_floors_risk_at_the_spread(chain, limits):
+    from sota.risk import package_scenario_risk
+
+    pkg = resolve_package(chain, "ic", Side.LONG, Tenor.T8_30)
+    res = resolve_size(pkg, chain.spot, 0.25, limits, PortfolioRisk(nav=1e6), chain.asof)
+    scenario = package_scenario_risk(
+        pkg, chain.spot, 0.25, 0.10, asof=chain.asof, sigma_mult=limits.risk_sigma
+    )
+    assert res.risk_per_unit == pytest.approx(max(scenario, pkg.half_spread) * 100)
+    assert res.accepted and res.units * res.risk_per_unit <= limits.target_risk_frac * 1e6
+
+
 def test_hedge_band():
     assert hedge_trade(4_000.0, 0, 100.0, 1_000_000.0, 0.005) == 0  # inside the $5,000 band
     trade = hedge_trade(12_000.0, 0, 100.0, 1_000_000.0, 0.005)

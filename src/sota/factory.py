@@ -42,7 +42,7 @@ def build_selector(settings: Settings, source: ChainSource, name: str | None = N
     if name == "oracle":
         from sota.selectors.oracle import HindsightOracle
 
-        return HindsightOracle(source)
+        return HindsightOracle(source, limits=settings.limits)
     raise ValueError(f"unknown selector {name!r}")
 
 

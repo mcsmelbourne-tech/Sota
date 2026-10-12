@@ -189,7 +189,7 @@ class Runner:
     # ------------------------------------------------------------------ main entry point
     def run_once(self, asof: date | None = None) -> RunReport:
         asof = asof or date.today()
-        chains = load_chains(self.source, self.settings.universe, asof)
+        chains = load_chains(self.source, self.settings.universe, asof, self.limits)
         acct = self.broker.account()
         features = compute_state(self.source, chains, asof)
         report = RunReport(asof, self.mode, acct.nav, features)

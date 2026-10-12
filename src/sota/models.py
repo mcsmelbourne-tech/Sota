@@ -95,10 +95,18 @@ class Quote:
     theta: float | None = None  # per calendar day, per share
     open_interest: int | None = None
     volume: int | None = None
+    fair: float | None = None  # smile-fitted value; None until the surface is smoothed
 
     @property
     def mid(self) -> float:
         return 0.5 * (self.bid + self.ask)
+
+    @property
+    def mark(self) -> float:
+        """Price used for fills and marks: the fair value kept inside the quoted spread, else mid."""
+        if self.fair is None:
+            return self.mid
+        return min(max(self.fair, self.bid), self.ask)
 
     @property
     def half_spread(self) -> float:
@@ -123,6 +131,7 @@ class Chain:
     quotes: dict[OptionContract, Quote]
     rate: float = 0.0
     div_yield: float = 0.0
+    smoothed: bool = field(default=False, init=False, compare=False)
     _index: dict[tuple[date, Right], list[OptionContract]] | None = field(
         default=None, init=False, repr=False, compare=False
     )
@@ -205,6 +214,7 @@ class Package:
     max_loss: float | None  # per share; None when unbounded
     half_spread: float  # per share, summed over legs
     leg_deltas: list[float] = field(default_factory=list)  # realized |delta| per leg at resolution
+    leg_ivs: list[float] = field(default_factory=list)  # implied vol per leg at resolution
 
     @property
     def contracts_per_unit(self) -> int:
@@ -215,13 +225,13 @@ class Package:
         return self.net_premium < 0.0
 
     def value(self, chain: Chain) -> float | None:
-        """Mark-to-mid liquidation value per share (negative means it costs to close)."""
+        """Mark-to-market liquidation value per share (negative means it costs to close)."""
         total = 0.0
         for leg in self.legs:
             q = chain.quote(leg.contract)
             if q is None or not q.is_valid:
                 return None
-            total += leg.ratio * q.mid
+            total += leg.ratio * q.mark
         return total
 
     def intrinsic_value(self, spot: float) -> float:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from datetime import date
 
 from sota.config import RiskLimits
 from sota.models import MULTIPLIER, Package
@@ -23,17 +24,30 @@ class SizeResult:
 
 
 def capital_per_share(pkg: Package, buffer: float) -> float | None:
+    """Collateral per share: the larger of max loss and premium, plus buffer; None if unbounded."""
     if pkg.max_loss is None:
         return None
-    return pkg.max_loss * (1.0 + buffer)
+    return max(pkg.max_loss, abs(pkg.net_premium)) * (1.0 + buffer)
 
 
 def resolve_size(
-    pkg: Package, spot: float, atm_iv: float, limits: RiskLimits, risk: PortfolioRisk
+    pkg: Package,
+    spot: float,
+    atm_iv: float,
+    limits: RiskLimits,
+    risk: PortfolioRisk,
+    asof: date | None = None,
 ) -> SizeResult:
     nav = risk.nav
     u = pkg.underlying
-    risk_unit = package_scenario_risk(pkg, spot, atm_iv, limits.iv_shock) * MULTIPLIER
+    if pkg.max_loss is not None and pkg.max_loss <= 0.0:
+        return SizeResult(0, 0.0, 0.0, "rejected: arbitrage-priced package (zero max loss)")
+    # A one-day loss cannot be smaller than the spread paid to exit the structure.
+    scenario = package_scenario_risk(
+        pkg, spot, atm_iv, limits.iv_shock, asof=asof, sigma_mult=limits.risk_sigma
+    )
+    risk_share = max(scenario, pkg.half_spread)
+    risk_unit = risk_share * MULTIPLIER
     if risk_unit <= 0.0:
         return SizeResult(0, 0.0, 0.0, "rejected: zero scenario risk")
     cap_share = capital_per_share(pkg, limits.collateral_buffer)
@@ -49,6 +63,9 @@ def resolve_size(
     bounds: dict[str, float] = {
         "target risk": limits.target_risk_frac * nav / risk_unit,
         "capital cap": (limits.nav_frac_cap * nav / cap_unit) if cap_unit > 0 else math.inf,
+        # Worst-case |delta| of any defined-risk structure is ~1 share per contract, so the
+        # notional is the exposure the account (or its hedge) may eventually have to carry.
+        "notional cap": limits.max_notional_frac * nav / (spot * MULTIPLIER),
         "underlying risk cap": (
             limits.risk_cap_per_underlying * nav - risk.scenario_risk_by_underlying.get(u, 0.0)
         )

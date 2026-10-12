@@ -88,7 +88,7 @@ def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
     d = _date(asof)
     s = _settings("backtest" if d < date.today() else None)
     source = build_source(s, synthetic=synthetic)
-    chains = load_chains(source, s.universe, d)
+    chains = load_chains(source, s.universe, d, s.limits)
     features = compute_state(source, chains, d)
     table = Table(title=f"Market state {d}")
     for col in ("underlying", "spot", "ret", "rv", "iv", "iv/rv", "wedge", "ts", "sk", "bf", "doi"):

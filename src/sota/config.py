@@ -31,15 +31,21 @@ class RiskLimits(BaseModel):
     delta_step: float = 0.05
     target_risk_frac: float = 0.005  # phi: scenario risk per package, fraction of NAV
     iv_shock: float = 0.10  # kappa: relative implied-vol shock
+    risk_sigma: float = 2.0  # spot shock in daily sigmas for scenario risk (paper: 1, Taylor)
     nav_frac_cap: float = 0.10  # f_NAV: capital per package
     risk_cap_per_underlying: float = 0.05  # rho_u
     risk_cap_total: float = 0.20  # rho_tot
     net_delta_cap: float = 0.50  # delta_max: net dollar delta, fraction of NAV
+    max_notional_frac: float = 0.50  # units x 100 x spot <= this x NAV: a package's |delta| <= its notional
     collateral_buffer: float = 0.05  # b
     hedge_band_frac: float = 0.005  # Delta_band: no-hedge band half-width, fraction of NAV
     force_close_dte: int = 1
     stop_loss_frac: float = 0.60  # of entry premium
     ruin_floor_frac: float = 0.20  # of initial NAV
+    max_rel_half_spread: float = (
+        0.25  # legs with (ask-bid)/2 above this fraction of the mark are untradable
+    )
+    smooth_surface: bool = True  # mark/price legs off a fitted IV smile instead of raw EOD mids
 
 
 class Costs(BaseModel):

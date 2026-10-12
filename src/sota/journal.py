@@ -65,6 +65,7 @@ def package_to_dict(pkg: Package) -> dict[str, Any]:
         "max_loss": pkg.max_loss,
         "half_spread": pkg.half_spread,
         "leg_deltas": pkg.leg_deltas,
+        "leg_ivs": pkg.leg_ivs,
     }
 
 
@@ -97,6 +98,7 @@ def package_from_dict(d: dict[str, Any]) -> Package:
         max_loss=None if d.get("max_loss") is None else float(d["max_loss"]),
         half_spread=float(d.get("half_spread", 0.0)),
         leg_deltas=list(d.get("leg_deltas", [])),
+        leg_ivs=list(d.get("leg_ivs", [])),
     )
 
 
