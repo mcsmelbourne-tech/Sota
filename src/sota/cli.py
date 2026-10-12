@@ -111,29 +111,63 @@ def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
 
 
 @app.command()
-def fetch(start: str, end: str) -> None:
-    """Download Theta Data chains for a date range into the local cache (resumable; Ctrl-C safe)."""
+def fetch(
+    start: str,
+    end: str,
+    max_outage_min: int = typer.Option(
+        60, help="Give up after this long without a successful request"
+    ),
+) -> None:
+    """Download Theta Data chains for a date range into the local cache (resumable; Ctrl-C safe).
+
+    Survives network outages and laptop sleep: a failed request is retried every minute, with a
+    fresh connection, until `--max-outage-min` passes without success.
+    """
+    import time
     from datetime import datetime
 
     from rich.progress import Progress
+
+    from sota.data.theta import error_detail
 
     s = _settings("backtest")
     source = build_source(s)
     first, last = date.fromisoformat(start), date.fromisoformat(end)
     fetched = skipped = empty = 0
     heartbeat = 0 if console.is_terminal else 25  # progress bars don't render into a log file
+
+    def resilient(call, label: str):
+        waited = 0.0
+        while True:
+            try:
+                return call()
+            except KeyboardInterrupt:
+                raise
+            except Exception as exc:  # noqa: BLE001 - any failure here is retried, not fatal
+                if waited >= max_outage_min * 60:
+                    raise
+                console.print(
+                    f"{datetime.now():%H:%M:%S} {label}: {error_detail(exc)} -> retry in 60s"
+                )
+                time.sleep(60)
+                waited += 60
+                source.reset_transport()  # type: ignore[attr-defined]
+
     try:
         with Progress(console=console) as progress:
             for u in s.universe:
                 # realized vol needs ~21 trading days of closes before the first decision date
-                source.ensure_closes(u, first - timedelta(days=45), last)  # type: ignore[attr-defined]
+                resilient(
+                    lambda u=u: source.ensure_closes(u, first - timedelta(days=45), last),  # type: ignore[attr-defined]
+                    f"{u} closes",
+                )
                 days = source.trading_days(u, first, last)  # type: ignore[attr-defined]
                 task = progress.add_task(f"{u:<6}", total=len(days))
                 done_before = fetched + skipped + empty
                 for i, d in enumerate(days, 1):
                     if source.store.has_chain(u, d):  # type: ignore[attr-defined]
                         skipped += 1
-                    elif source.get_chain(u, d) is None:
+                    elif resilient(lambda u=u, d=d: source.get_chain(u, d), f"{u} {d}") is None:
                         empty += 1
                     else:
                         fetched += 1
@@ -146,6 +180,12 @@ def fetch(start: str, end: str) -> None:
                 )
     except KeyboardInterrupt:
         console.print("[yellow]interrupted; re-run the same command to resume[/yellow]")
+    except Exception as exc:  # noqa: BLE001
+        console.print(
+            f"[red]giving up after {max_outage_min} min of failures: {error_detail(exc)}[/red]"
+        )
+        console.print("[yellow]the cache is intact; re-run the same command to resume[/yellow]")
+        raise typer.Exit(code=1) from exc
     console.print(f"fetched {fetched}, already cached {skipped}, no data {empty}")
 
 

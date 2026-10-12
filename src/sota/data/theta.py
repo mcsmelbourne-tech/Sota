@@ -65,7 +65,7 @@ def _grpc_code(exc: BaseException) -> str | None:
     return getattr(status, "name", None)
 
 
-def _detail(exc: BaseException) -> str:
+def error_detail(exc: BaseException) -> str:
     """One-line error text; gRPC errors carry the useful message in .details()."""
     details = getattr(exc, "details", None)
     text = details() if callable(details) else None
@@ -161,7 +161,7 @@ class LibraryTransport:
                 log.warning(
                     "theta %s: %s; retry %d/%d in %.0fs",
                     endpoint,
-                    _detail(exc),
+                    error_detail(exc),
                     attempt,
                     self.max_attempts - 1,
                     delay,
@@ -182,6 +182,7 @@ class ThetaDataSource:
     ) -> None:
         self.settings = settings
         self._transport = transport
+        self._owns_transport = transport is None
         self.store = ChainStore(Path(data_dir) / "theta")
         self.rate = rate
         self.max_dte = max_dte
@@ -202,6 +203,11 @@ class ThetaDataSource:
                 self._transport = RestTransport(s.base_url, s.timeout_s)
         return self._transport
 
+    def reset_transport(self) -> None:
+        """Drop the live connection so the next request re-authenticates (after an outage)."""
+        if self._owns_transport:
+            self._transport = None
+
     def _rows(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
         self._throttle.wait()
         return self.transport.fetch(endpoint, **params)
@@ -213,7 +219,9 @@ class ThetaDataSource:
         try:
             return self._rows(endpoint, **params)
         except Exception as exc:  # noqa: BLE001 - permission/transport errors must not block the chain
-            log.warning("theta %s unavailable (%s); continuing without it", endpoint, _detail(exc))
+            log.warning(
+                "theta %s unavailable (%s); continuing without it", endpoint, error_detail(exc)
+            )
             self._unavailable.add(endpoint)
             return []
 

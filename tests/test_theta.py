@@ -181,6 +181,30 @@ def test_cache_only_source_needs_no_credentials(tmp_path):
     assert src._transport is None  # created lazily on first network call
 
 
+def test_reset_transport_reconnects_after_outage(tmp_path, monkeypatch):
+    import sota.data.theta as theta_mod
+
+    built: list[FakeTransport] = []
+
+    def factory(*args, **kwargs):
+        t = FakeTransport("library")
+        built.append(t)
+        return t
+
+    monkeypatch.setattr(theta_mod, "LibraryTransport", factory)
+    src = ThetaDataSource(ThetaSettings(transport="library"), tmp_path)
+    src.get_chain("AAPL", ASOF)
+    assert len(built) == 1
+    src.reset_transport()
+    src.get_chain("AAPL", ASOF + timedelta(days=1))
+    assert len(built) == 2, "after a reset the next request authenticates a fresh client"
+
+    injected = FakeTransport("library")
+    src2 = ThetaDataSource(ThetaSettings(), tmp_path, transport=injected)
+    src2.reset_transport()
+    assert src2.transport is injected, "an injected transport is never dropped"
+
+
 def test_rest_transport_formats_dates_and_tolerates_errors():
     import httpx
 
