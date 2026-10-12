@@ -36,7 +36,9 @@ class RiskLimits(BaseModel):
     risk_cap_per_underlying: float = 0.05  # rho_u
     risk_cap_total: float = 0.20  # rho_tot
     net_delta_cap: float = 0.50  # delta_max: net dollar delta, fraction of NAV
-    max_notional_frac: float = 0.50  # units x 100 x spot <= this x NAV: a package's |delta| <= its notional
+    max_notional_frac: float = (
+        0.50  # units x 100 x spot <= this x NAV: a package's |delta| <= its notional
+    )
     collateral_buffer: float = 0.05  # b
     hedge_band_frac: float = 0.005  # Delta_band: no-hedge band half-width, fraction of NAV
     force_close_dte: int = 1
@@ -115,6 +117,7 @@ class Settings(BaseSettings):
     risk_free_rate: float = 0.0
     selector: Literal["threshold", "llm", "oracle"] = "threshold"
     threshold_gate: bool = True  # paper Table 8: trade only when term structure ts < 0
+    threshold_tenor: Literal["0-7", "8-30", "31-90", "91-180"] = "8-30"
     cost_preset: Literal["paper", "robinhood", "ibkr"] = "paper"
     data_dir: Path = Path("data")
     journal_path: Path = Path("data/journal.sqlite")

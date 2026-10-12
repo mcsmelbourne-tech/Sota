@@ -32,9 +32,12 @@ def build_source(settings: Settings, synthetic: bool = False) -> ChainSource:
 def build_selector(settings: Settings, source: ChainSource, name: str | None = None) -> Selector:
     name = name or settings.selector
     if name == "threshold":
+        from sota.models import Tenor
         from sota.selectors.threshold import ThresholdSelector
 
-        return ThresholdSelector(participation_gate=settings.threshold_gate)
+        return ThresholdSelector(
+            tenor=Tenor(settings.threshold_tenor), participation_gate=settings.threshold_gate
+        )
     if name == "llm":
         from sota.selectors.llm import LLMSelector
 
