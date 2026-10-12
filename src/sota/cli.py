@@ -113,12 +113,15 @@ def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
 @app.command()
 def fetch(start: str, end: str) -> None:
     """Download Theta Data chains for a date range into the local cache (resumable; Ctrl-C safe)."""
+    from datetime import datetime
+
     from rich.progress import Progress
 
     s = _settings("backtest")
     source = build_source(s)
     first, last = date.fromisoformat(start), date.fromisoformat(end)
     fetched = skipped = empty = 0
+    heartbeat = 0 if console.is_terminal else 25  # progress bars don't render into a log file
     try:
         with Progress(console=console) as progress:
             for u in s.universe:
@@ -126,7 +129,8 @@ def fetch(start: str, end: str) -> None:
                 source.ensure_closes(u, first - timedelta(days=45), last)  # type: ignore[attr-defined]
                 days = source.trading_days(u, first, last)  # type: ignore[attr-defined]
                 task = progress.add_task(f"{u:<6}", total=len(days))
-                for d in days:
+                done_before = fetched + skipped + empty
+                for i, d in enumerate(days, 1):
                     if source.store.has_chain(u, d):  # type: ignore[attr-defined]
                         skipped += 1
                     elif source.get_chain(u, d) is None:
@@ -134,6 +138,12 @@ def fetch(start: str, end: str) -> None:
                     else:
                         fetched += 1
                     progress.advance(task)
+                    if heartbeat and i % heartbeat == 0:
+                        console.print(f"{datetime.now():%H:%M:%S} {u} {i}/{len(days)}")
+                console.print(
+                    f"{u}: {fetched + skipped + empty - done_before}/{len(days)} days done "
+                    f"(total fetched {fetched}, cached {skipped}, no data {empty})"
+                )
     except KeyboardInterrupt:
         console.print("[yellow]interrupted; re-run the same command to resume[/yellow]")
     console.print(f"fetched {fetched}, already cached {skipped}, no data {empty}")
