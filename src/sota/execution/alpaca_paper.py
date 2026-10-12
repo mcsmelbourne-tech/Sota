@@ -10,6 +10,13 @@ from sota.models import Package
 PAPER_HOST = "paper-api.alpaca.markets"
 
 
+def assert_paper_host(base: object) -> None:
+    """Refuse any trading client not pointed at the paper host. alpaca-py stores a BaseURL enum."""
+    base_url = str(getattr(base, "value", base))
+    if PAPER_HOST not in base_url:
+        raise RuntimeError(f"refusing to run: trading client is not pointed at {PAPER_HOST}")
+
+
 class AlpacaPaperBroker:
     mode = "paper"
 
@@ -18,9 +25,7 @@ class AlpacaPaperBroker:
 
         key, secret = _creds(settings)
         self.client = TradingClient(key, secret, paper=True)
-        base_url = str(getattr(self.client, "_base_url", PAPER_HOST))
-        if PAPER_HOST not in base_url:
-            raise RuntimeError(f"refusing to run: trading client is not pointed at {PAPER_HOST}")
+        assert_paper_host(getattr(self.client, "_base_url", ""))
 
     def account(self) -> AccountInfo:
         a = self.client.get_account()

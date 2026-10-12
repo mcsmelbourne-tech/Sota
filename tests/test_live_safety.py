@@ -43,6 +43,24 @@ def test_manual_module_has_no_broker_sdk_import():
     assert "alpaca" not in src.read_text().lower()
 
 
+def test_paper_broker_guard_reads_enum_value():
+    from alpaca.common.enums import BaseURL
+    from pydantic import SecretStr
+
+    from sota.config import AlpacaSettings
+    from sota.execution.alpaca_paper import AlpacaPaperBroker, assert_paper_host
+
+    assert_paper_host(BaseURL.TRADING_PAPER)  # enum, as alpaca-py stores it
+    assert_paper_host("https://paper-api.alpaca.markets")  # plain string
+    with pytest.raises(RuntimeError, match="refusing to run"):
+        assert_paper_host(BaseURL.TRADING_LIVE)
+    with pytest.raises(RuntimeError, match="refusing to run"):
+        assert_paper_host("BaseURL.TRADING_PAPER")  # the enum's repr must not pass either
+
+    broker = AlpacaPaperBroker(AlpacaSettings(api_key=SecretStr("k"), secret_key=SecretStr("s")))
+    assert broker.client._base_url is BaseURL.TRADING_PAPER  # construction makes no network call
+
+
 def test_live_runner_issues_tickets_and_confirms(settings, source):
     live = settings.model_copy(update={"mode": Mode.LIVE, "cost_preset": "robinhood"})
     journal = Journal(":memory:")
