@@ -63,6 +63,8 @@ class HindsightOracle(BaseSelector):
                 if future is None:
                     continue
                 for code, spec in FAMILIES.items():
+                    if self.limits.families is not None and code not in self.limits.families:
+                        continue
                     sides = (
                         (Side.LONG, Side.SHORT)
                         if spec.category == "directional" or code == "bf"

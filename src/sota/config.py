@@ -28,6 +28,7 @@ class RiskLimits(BaseModel):
     max_positions_per_underlying: int = 3
     max_order_lines: int = 8
     candidates_per_underlying: int = 6
+    families: list[str] | None = None  # allow-list of family codes; None = all nine
     delta_step: float = 0.05
     target_risk_frac: float = 0.005  # phi: scenario risk per package, fraction of NAV
     iv_shock: float = 0.10  # kappa: relative implied-vol shock

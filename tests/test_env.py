@@ -78,6 +78,13 @@ def test_small_account_trades_whole_contracts(source):
         assert p.units * p.package.max_loss * 100 <= limits.nav_frac_cap * 25_000 * (1 + 1e-9)
 
 
+def test_family_allow_list(source):
+    limits = RiskLimits(families=["ic"])
+    env = TradingEnv(source, ["AAA", "BBB"], limits, Costs(), 1_000_000)
+    result = env.run(_dates(source, 10), OneOfEach())
+    assert result.positions and {p.package.family for p in result.positions} == {"ic"}
+
+
 def test_oracle_is_profitable_on_synthetic(source):
     env = TradingEnv(source, ["AAA", "BBB"], RiskLimits(), Costs(), 1_000_000)
     result = env.run(_dates(source, 50), HindsightOracle(source))

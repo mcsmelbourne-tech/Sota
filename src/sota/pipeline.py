@@ -82,6 +82,8 @@ def price_candidates(
     for p in proposals:
         if p.action != "open":
             continue
+        if limits.families is not None and p.family not in limits.families:
+            continue
         chain = chains.get(p.underlying)
         if chain is None or per_u.get(p.underlying, 0) >= limits.candidates_per_underlying:
             continue
