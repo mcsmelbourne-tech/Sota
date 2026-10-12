@@ -123,6 +123,9 @@ class Chain:
     quotes: dict[OptionContract, Quote]
     rate: float = 0.0
     div_yield: float = 0.0
+    _index: dict[tuple[date, Right], list[OptionContract]] | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
     def expiries(self) -> list[date]:
         return sorted({c.expiry for c in self.quotes})
@@ -130,6 +133,13 @@ class Chain:
     def contracts(
         self, expiry: date | None = None, right: Right | None = None
     ) -> list[OptionContract]:
+        if expiry is not None and right is not None:
+            if self._index is None:
+                idx: dict[tuple[date, Right], list[OptionContract]] = {}
+                for c in sorted(self.quotes, key=lambda c: (c.expiry, c.strike, c.right.value)):
+                    idx.setdefault((c.expiry, c.right), []).append(c)
+                self._index = idx
+            return self._index.get((expiry, right), [])
         return sorted(
             (
                 c

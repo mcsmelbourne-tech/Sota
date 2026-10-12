@@ -99,7 +99,7 @@ class FakeTransport:
 def test_fetch_chain_parses_both_row_styles(tmp_path, style):
     transport = FakeTransport(style)
     src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
-    chain = src.get_chain("AAPL", ASOF)
+    chain = src.fetch_chain("AAPL", ASOF)
     assert chain is not None and chain.spot == 222.5
     assert set(chain.quotes) == {
         OptionContract("AAPL", EXP, 220.0, Right.CALL),
@@ -111,6 +111,18 @@ def test_fetch_chain_parses_both_row_styles(tmp_path, style):
     c230 = chain.quote(OptionContract("AAPL", EXP, 230.0, Right.CALL))
     assert c230.iv is None and c230.open_interest is None  # missing IV/OI stay None, never 0 or NaN
     assert all(p["expiration"] == "*" and p["start_date"] == ASOF for _, p in transport.calls)
+
+
+def test_get_chain_solves_and_persists_iv(tmp_path):
+    transport = FakeTransport("library")
+    src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
+    chain = src.get_chain("AAPL", ASOF)
+    c230 = OptionContract("AAPL", EXP, 230.0, Right.CALL)
+    assert chain.quote(c230).iv is not None, "IV missing from the vendor is solved from mid"
+    assert chain.quote(OptionContract("AAPL", EXP, 220.0, Right.CALL)).iv == 0.28, "vendor IV kept"
+    on_disk = src.store.load_chain("AAPL", ASOF)
+    assert on_disk.quote(c230).iv == pytest.approx(chain.quote(c230).iv), "solved IV written back"
+    assert src.get_chain("AAPL", ASOF) is chain, "same-session loads come from the in-memory LRU"
 
 
 def test_chain_is_cached_to_parquet(tmp_path):
@@ -145,13 +157,22 @@ def test_lower_tiers_degrade_gracefully(tmp_path):
     chain = src.get_chain("AAPL", ASOF)
     assert chain is not None
     assert chain.spot == 224.0, "spot falls back to the stock EOD close when greeks are unavailable"
-    assert all(q.iv is None and q.open_interest is None for q in chain.quotes.values())
-    chain.ensure_greeks()
+    assert all(q.open_interest is None for q in chain.quotes.values())
     assert all(q.iv is not None for q in chain.quotes.values()), "IV is solved locally from mid"
     src.get_chain("AAPL", ASOF + timedelta(days=1))
     gated_calls = [e for e, _ in transport.calls if e in transport.gated]
     assert len(gated_calls) == 2, "a gated endpoint is tried once per session, not once per day"
     assert all(p.get("max_dte") == 200 for e, p in transport.calls if e.startswith("option_"))
+
+
+def test_non_trading_days_skip_the_network(tmp_path):
+    transport = FakeTransport("library")
+    src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
+    src.ensure_closes("AAPL", date(2024, 11, 1), ASOF)  # calendar: 11-01 and 11-04 only
+    n = len(transport.calls)
+    assert src.get_chain("AAPL", date(2024, 11, 2)) is None  # Saturday, inside the calendar
+    assert src.get_chain("AAPL", date(2024, 11, 2)) is None
+    assert len(transport.calls) == n, "no option request for a day the calendar says is closed"
 
 
 def test_closes_and_trading_days(tmp_path):
@@ -277,6 +298,22 @@ def test_library_transport_gives_up_after_max_attempts():
     with pytest.raises(_GrpcError):
         t.fetch("option_history_eod", symbol="AAPL")
     assert client.calls == 3
+
+
+def test_library_transport_reauthenticates_once_on_invalid_session():
+    first = _FlakyClient([_GrpcError("UNAUTHENTICATED", "Invalid session ID")])
+    fresh = _FlakyClient([])
+    t = LibraryTransport(None, client=first, client_factory=lambda: fresh, sleep=lambda _: None)
+    assert t.fetch("option_history_eod", symbol="AAPL") == [{"symbol": "AAPL"}]
+    assert first.calls == 1 and fresh.calls == 1 and t.client is fresh
+
+    still_bad = _FlakyClient([_GrpcError("UNAUTHENTICATED")] * 3)
+    t2 = LibraryTransport(
+        None, client=still_bad, client_factory=lambda: still_bad, sleep=lambda _: None
+    )
+    with pytest.raises(_GrpcError):
+        t2.fetch("option_history_eod", symbol="AAPL")
+    assert still_bad.calls == 2, "one re-auth attempt, then the error propagates"
 
 
 def test_throttle_spaces_requests():

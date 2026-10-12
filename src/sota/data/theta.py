@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
@@ -129,14 +130,17 @@ class LibraryTransport:
         api_key: str | None,
         *,
         client: Any | None = None,
+        client_factory: Callable[[], Any] | None = None,
         max_attempts: int = 5,
         backoff_s: float = 5.0,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.max_attempts, self.backoff_s, self._sleep = max_attempts, backoff_s, sleep
-        if client is not None:
-            self.client = client
-            return
+        self._factory = client_factory or (lambda: self._build_client(api_key))
+        self.client = client if client is not None else self._factory()
+
+    @staticmethod
+    def _build_client(api_key: str | None) -> Any:
         from thetadata import ThetaClient
 
         # The library logs the full account record (ids, billing fields) at INFO on login.
@@ -144,19 +148,27 @@ class LibraryTransport:
         kwargs: dict[str, Any] = {"dataframe_type": "polars"}
         if api_key:
             kwargs["api_key"] = api_key
-        self.client = ThetaClient(**kwargs)
+        return ThetaClient(**kwargs)
 
     def fetch(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
         from thetadata.errors import NoDataFoundError
 
         delay = self.backoff_s
+        reauthenticated = False
         for attempt in range(1, self.max_attempts + 1):
             try:
                 return getattr(self.client, endpoint)(**params).to_dicts()
             except NoDataFoundError:
                 return []
             except Exception as exc:
-                if _grpc_code(exc) not in self.TRANSIENT or attempt == self.max_attempts:
+                code = _grpc_code(exc)
+                # Theta allows one session per account; another client (or a restart) invalidates ours.
+                if code == "UNAUTHENTICATED" and not reauthenticated:
+                    log.warning("theta session invalid (%s); re-authenticating", error_detail(exc))
+                    self.client = self._factory()
+                    reauthenticated = True
+                    continue
+                if code not in self.TRANSIENT or attempt == self.max_attempts:
                     raise
                 log.warning(
                     "theta %s: %s; retry %d/%d in %.0fs",
@@ -189,6 +201,8 @@ class ThetaDataSource:
         self._closes_cache: dict[str, list[tuple[date, float]]] = {}
         self._unavailable: set[str] = set()
         self._throttle = _Throttle(settings.requests_per_minute)
+        self._chains: OrderedDict[tuple[str, date], Chain] = OrderedDict()
+        self._no_data: set[tuple[str, date]] = set()
 
     # ------------------------------------------------------------------ transport
     @property
@@ -288,13 +302,41 @@ class ThetaDataSource:
         return Chain(underlying, asof, spot, quotes, rate=self.rate)
 
     def get_chain(self, underlying: str, asof: date) -> Chain | None:
-        cached = self.store.load_chain(underlying, asof, rate=self.rate)
-        if cached is not None:
-            return cached
-        chain = self.fetch_chain(underlying, asof)
-        if chain is not None:
+        key = (underlying, asof)
+        if key in self._chains:
+            self._chains.move_to_end(key)
+            return self._chains[key]
+        if key in self._no_data or self._is_trading_day(underlying, asof) is False:
+            return None
+
+        chain = self.store.load_chain(underlying, asof, rate=self.rate)
+        fetched = chain is None
+        if chain is None:
+            chain = self.fetch_chain(underlying, asof)
+        if chain is None:
+            self._no_data.add(key)
+            return None
+
+        # Solving IV is the slow step; persist it so later loads only recompute greeks.
+        before = sum(1 for q in chain.quotes.values() if q.iv is not None)
+        chain.ensure_greeks()
+        after = sum(1 for q in chain.quotes.values() if q.iv is not None)
+        if fetched or after > before:
             self.store.save_chain(chain)
+
+        self._chains[key] = chain
+        if len(self._chains) > self.CHAIN_LRU_SIZE:
+            self._chains.popitem(last=False)
         return chain
+
+    CHAIN_LRU_SIZE = 32  # one day's working set: today's chains plus the oracle's two look-aheads
+
+    def _is_trading_day(self, underlying: str, asof: date) -> bool | None:
+        """True/False when the cached closes calendar covers `asof`; None when unknown."""
+        closes = self._closes(underlying)
+        if not closes or not (closes[0][0] <= asof <= closes[-1][0]):
+            return None
+        return any(d == asof for d, _ in closes)
 
     # ------------------------------------------------------------------ closes
     MAX_EOD_SPAN_DAYS = 365  # server limit per stock_history_eod request
