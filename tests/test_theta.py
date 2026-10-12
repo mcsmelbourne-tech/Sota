@@ -188,3 +188,75 @@ def test_library_transport_is_importable():
     assert (
         LibraryTransport.__init__ is not None
     )  # construction authenticates, so only check the import path
+
+
+class _GrpcError(Exception):
+    def __init__(self, name: str, text: str = "slow down") -> None:
+        super().__init__(text)
+        self._name, self._text = name, text
+
+    def code(self):
+        return type("Code", (), {"name": self._name})()
+
+    def details(self):
+        return self._text
+
+
+class _FlakyClient:
+    def __init__(self, failures: list[Exception]) -> None:
+        self.failures, self.calls = failures, 0
+
+    def option_history_eod(self, **params):
+        import polars as pl
+
+        self.calls += 1
+        if self.failures:
+            raise self.failures.pop(0)
+        return pl.DataFrame({"symbol": ["AAPL"]})
+
+
+def test_library_transport_retries_transient_grpc_errors():
+    slept: list[float] = []
+    client = _FlakyClient([_GrpcError("RESOURCE_EXHAUSTED"), _GrpcError("UNAVAILABLE")])
+    t = LibraryTransport(None, client=client, backoff_s=1.0, sleep=slept.append)
+    assert t.fetch("option_history_eod", symbol="AAPL") == [{"symbol": "AAPL"}]
+    assert client.calls == 3 and slept == [1.0, 2.0]
+
+
+def test_library_transport_does_not_retry_permission_errors():
+    client = _FlakyClient([_GrpcError("PERMISSION_DENIED", "needs a value subscription")])
+    t = LibraryTransport(None, client=client, sleep=lambda _: None)
+    with pytest.raises(_GrpcError):
+        t.fetch("option_history_eod", symbol="AAPL")
+    assert client.calls == 1
+
+
+def test_library_transport_gives_up_after_max_attempts():
+    client = _FlakyClient([_GrpcError("UNAVAILABLE")] * 3)
+    t = LibraryTransport(None, client=client, max_attempts=3, sleep=lambda _: None)
+    with pytest.raises(_GrpcError):
+        t.fetch("option_history_eod", symbol="AAPL")
+    assert client.calls == 3
+
+
+def test_throttle_spaces_requests():
+    from sota.data.theta import _Throttle
+
+    now = [100.0]
+    slept: list[float] = []
+    th = _Throttle(per_minute=20, clock=lambda: now[0], sleep=slept.append)
+    th.wait()  # first call never waits
+    th.wait()  # same instant -> must wait the full 3s interval
+    now[0] += 10.0
+    th.wait()  # well past the interval -> no wait
+    assert slept == [pytest.approx(3.0)]
+    assert _Throttle(per_minute=0, sleep=slept.append).interval == 0.0
+
+
+def test_source_throttles_every_request(tmp_path):
+    transport = FakeTransport("library")
+    src = ThetaDataSource(ThetaSettings(requests_per_minute=20), tmp_path, transport=transport)
+    slept: list[float] = []
+    src._throttle._sleep = slept.append
+    src.get_chain("AAPL", ASOF)
+    assert len(slept) == len(transport.calls) - 1  # every request after the first is spaced

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated
 
 import typer
@@ -84,10 +84,10 @@ def info() -> None:
 
 @app.command()
 def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
-    """Compute the 10 market-state features for the universe."""
-    s = _settings()
-    source = build_source(s, synthetic=synthetic)
+    """Compute the 10 market-state features for the universe (past dates use Theta Data)."""
     d = _date(asof)
+    s = _settings("backtest" if d < date.today() else None)
+    source = build_source(s, synthetic=synthetic)
     chains = load_chains(source, s.universe, d)
     features = compute_state(source, chains, d)
     table = Table(title=f"Market state {d}")
@@ -108,6 +108,35 @@ def scan(asof: DateOpt = None, synthetic: bool = False) -> None:
             f"{f.doi:+.3f}",
         )
     console.print(table)
+
+
+@app.command()
+def fetch(start: str, end: str) -> None:
+    """Download Theta Data chains for a date range into the local cache (resumable; Ctrl-C safe)."""
+    from rich.progress import Progress
+
+    s = _settings("backtest")
+    source = build_source(s)
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+    fetched = skipped = empty = 0
+    try:
+        with Progress(console=console) as progress:
+            for u in s.universe:
+                # realized vol needs ~21 trading days of closes before the first decision date
+                source.ensure_closes(u, first - timedelta(days=45), last)  # type: ignore[attr-defined]
+                days = source.trading_days(u, first, last)  # type: ignore[attr-defined]
+                task = progress.add_task(f"{u:<6}", total=len(days))
+                for d in days:
+                    if source.store.has_chain(u, d):  # type: ignore[attr-defined]
+                        skipped += 1
+                    elif source.get_chain(u, d) is None:
+                        empty += 1
+                    else:
+                        fetched += 1
+                    progress.advance(task)
+    except KeyboardInterrupt:
+        console.print("[yellow]interrupted; re-run the same command to resume[/yellow]")
+    console.print(f"fetched {fetched}, already cached {skipped}, no data {empty}")
 
 
 @app.command()

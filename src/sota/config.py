@@ -73,6 +73,7 @@ class ThetaSettings(BaseModel):
     api_key: SecretStr | None = None  # library; else THETADATA_API_KEY / .env / creds.txt discovery
     base_url: str = "http://127.0.0.1:25503/v3"  # rest
     timeout_s: float = 120.0
+    requests_per_minute: int = 20  # Free tier cap; paid tiers limit concurrency instead, so use 0
 
 
 class LLMSettings(BaseModel):

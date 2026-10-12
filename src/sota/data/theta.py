@@ -15,6 +15,8 @@ The transport is created on first use, so cache-only runs never need credentials
 from __future__ import annotations
 
 import logging
+import time
+from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Protocol
@@ -57,6 +59,42 @@ def _num(v: Any) -> float | None:
     return f if f == f and abs(f) != float("inf") else None
 
 
+def _grpc_code(exc: BaseException) -> str | None:
+    code = getattr(exc, "code", None)
+    status = code() if callable(code) else None
+    return getattr(status, "name", None)
+
+
+def _detail(exc: BaseException) -> str:
+    """One-line error text; gRPC errors carry the useful message in .details()."""
+    details = getattr(exc, "details", None)
+    text = details() if callable(details) else None
+    return str(text or str(exc).strip().splitlines()[0])[:200]
+
+
+class _Throttle:
+    """Spaces requests at least 60/per_minute seconds apart; per_minute <= 0 disables."""
+
+    def __init__(
+        self,
+        per_minute: int,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.interval = 60.0 / per_minute if per_minute > 0 else 0.0
+        self._clock, self._sleep = clock, sleep
+        self._last: float | None = None
+
+    def wait(self) -> None:
+        if self.interval <= 0:
+            return
+        if self._last is not None:
+            delay = self._last + self.interval - self._clock()
+            if delay > 0:
+                self._sleep(delay)
+        self._last = self._clock()
+
+
 class Transport(Protocol):
     def fetch(self, endpoint: str, **params: Any) -> list[dict[str, Any]]: ...
 
@@ -84,9 +122,25 @@ class RestTransport:
 class LibraryTransport:
     """`thetadata` package. Auth: explicit key, else THETADATA_API_KEY / .env / creds.txt discovery."""
 
-    def __init__(self, api_key: str | None) -> None:
+    TRANSIENT = frozenset({"RESOURCE_EXHAUSTED", "UNAVAILABLE", "DEADLINE_EXCEEDED", "INTERNAL"})
+
+    def __init__(
+        self,
+        api_key: str | None,
+        *,
+        client: Any | None = None,
+        max_attempts: int = 5,
+        backoff_s: float = 5.0,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.max_attempts, self.backoff_s, self._sleep = max_attempts, backoff_s, sleep
+        if client is not None:
+            self.client = client
+            return
         from thetadata import ThetaClient
 
+        # The library logs the full account record (ids, billing fields) at INFO on login.
+        logging.getLogger("thetadata").setLevel(logging.WARNING)
         kwargs: dict[str, Any] = {"dataframe_type": "polars"}
         if api_key:
             kwargs["api_key"] = api_key
@@ -95,10 +149,26 @@ class LibraryTransport:
     def fetch(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
         from thetadata.errors import NoDataFoundError
 
-        try:
-            return getattr(self.client, endpoint)(**params).to_dicts()
-        except NoDataFoundError:
-            return []
+        delay = self.backoff_s
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return getattr(self.client, endpoint)(**params).to_dicts()
+            except NoDataFoundError:
+                return []
+            except Exception as exc:
+                if _grpc_code(exc) not in self.TRANSIENT or attempt == self.max_attempts:
+                    raise
+                log.warning(
+                    "theta %s: %s; retry %d/%d in %.0fs",
+                    endpoint,
+                    _detail(exc),
+                    attempt,
+                    self.max_attempts - 1,
+                    delay,
+                )
+                self._sleep(delay)
+                delay *= 2
+        return []
 
 
 class ThetaDataSource:
@@ -117,6 +187,7 @@ class ThetaDataSource:
         self.max_dte = max_dte
         self._closes_cache: dict[str, list[tuple[date, float]]] = {}
         self._unavailable: set[str] = set()
+        self._throttle = _Throttle(settings.requests_per_minute)
 
     # ------------------------------------------------------------------ transport
     @property
@@ -132,6 +203,7 @@ class ThetaDataSource:
         return self._transport
 
     def _rows(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
+        self._throttle.wait()
         return self.transport.fetch(endpoint, **params)
 
     def _optional_rows(self, endpoint: str, **params: Any) -> list[dict[str, Any]]:
@@ -141,7 +213,7 @@ class ThetaDataSource:
         try:
             return self._rows(endpoint, **params)
         except Exception as exc:  # noqa: BLE001 - permission/transport errors must not block the chain
-            log.warning("theta %s unavailable (%s); continuing without it", endpoint, exc)
+            log.warning("theta %s unavailable (%s); continuing without it", endpoint, _detail(exc))
             self._unavailable.add(endpoint)
             return []
 
