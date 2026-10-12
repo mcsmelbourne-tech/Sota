@@ -67,7 +67,11 @@ class AlpacaSettings(BaseModel):
 
 
 class ThetaSettings(BaseModel):
-    base_url: str = "http://127.0.0.1:25503/v3"
+    """`library` = thetadata package (API key, no Terminal); `rest` = Theta Terminal v3 running locally."""
+
+    transport: Literal["library", "rest"] = "library"
+    api_key: SecretStr | None = None  # library; else THETADATA_API_KEY / .env / creds.txt discovery
+    base_url: str = "http://127.0.0.1:25503/v3"  # rest
     timeout_s: float = 120.0
 
 

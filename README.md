@@ -9,7 +9,7 @@ Three modes:
 
 | mode | data | execution |
 |---|---|---|
-| `backtest` | Theta Data (v3 Terminal) or `--synthetic` | point-in-time environment, midpoint fills + fees |
+| `backtest` | Theta Data (`thetadata` library with an API key, or the Theta Terminal REST server) or `--synthetic` | point-in-time environment, midpoint fills + fees |
 | `paper` | Alpaca market data | auto-executes on the Alpaca **paper** account (`paper=True` hard-coded) |
 | `live` | Alpaca market data (read-only) | **never places orders** — issues tickets you enter manually (e.g. Robinhood), then confirm |
 
@@ -44,6 +44,11 @@ uv run sota positions --mode live
 Selectors: `threshold` (paper Table 8 rules; `SOTA_THRESHOLD_GATE=false` disables the `ts<0`
 participation gate), `llm` (anonymized state -> JSON candidates via any OpenAI-compatible API),
 `oracle` (hindsight reference, backtest only). Cost presets: `paper` (Table 5), `robinhood`, `ibkr`.
+
+Theta Data transport: `SOTA_THETA__TRANSPORT=library` (default) talks to Theta's servers directly
+through the `thetadata` package using `SOTA_THETA__API_KEY` (or `THETADATA_API_KEY`); `rest` uses a
+locally running Theta Terminal v3 at `SOTA_THETA__BASE_URL`. Both yield identical chains, and every
+fetched day is cached under `data/theta/` so repeated backtests run offline.
 
 Layout: `src/sota/{features,strategies,resolvers,risk,pipeline}.py` are the paper's mechanics;
 `backtest/` the environment and metrics; `selectors/` the policies; `data/` Theta/Alpaca/synthetic

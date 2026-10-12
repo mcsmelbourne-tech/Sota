@@ -70,7 +70,11 @@ def info() -> None:
     table.add_row("costs", s.effective_costs.model_dump_json())
     table.add_row("limits", s.limits.model_dump_json())
     table.add_row("alpaca keys", "set" if s.alpaca.api_key else "missing")
-    table.add_row("theta", s.theta.base_url)
+    theta_auth = "set" if s.theta.api_key else "via THETADATA_API_KEY/.env/creds.txt"
+    table.add_row(
+        "theta",
+        f"{s.theta.transport} / {s.theta.base_url if s.theta.transport == 'rest' else f'api key {theta_auth}'}",
+    )
     table.add_row(
         "llm", f"{s.llm.base_url} / {s.llm.model} / key {'set' if s.llm.api_key else 'missing'}"
     )

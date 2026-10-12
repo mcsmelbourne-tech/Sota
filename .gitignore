@@ -183,7 +183,7 @@ cython_debug/
 .DS_Store
 
 # SOTA project: local market data cache, journal, secrets
-data/
+/data/
 *.sqlite
 *.sqlite-journal
 *.parquet
