@@ -65,7 +65,21 @@ def info() -> None:
     table.add_row("mode", s.mode.value)
     table.add_row("selector", s.selector)
     table.add_row("universe", ", ".join(s.universe))
-    table.add_row("initial_nav", f"{s.initial_nav:,.0f}")
+    table.add_row("initial_nav (backtest)", f"{s.initial_nav:,.0f}")
+    table.add_row(
+        "sizing_nav (paper)",
+        f"{s.sizing_nav:,.0f}" if s.sizing_nav else "not set -> real account equity",
+    )
+    lim = s.limits
+    table.add_row(
+        "risk profile",
+        f"risk {lim.target_risk_frac:.1%}/package, capital cap {lim.nav_frac_cap:.0%}, "
+        f"hedge {'on' if lim.hedge else 'off'}, families "
+        f"{','.join(lim.families) if lim.families else 'all'}",
+    )
+    table.add_row(
+        "threshold rule", f"gate {'on' if s.threshold_gate else 'off'}, tenor {s.threshold_tenor}"
+    )
     table.add_row("cost_preset", s.cost_preset)
     table.add_row("costs", s.effective_costs.model_dump_json())
     table.add_row("limits", s.limits.model_dump_json())
