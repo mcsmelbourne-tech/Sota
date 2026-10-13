@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import uuid
 from collections.abc import Sequence
@@ -17,6 +18,8 @@ from sota.resolvers.hedge import hedge_trade
 from sota.resolvers.size import resolve_size
 from sota.risk import build_portfolio_risk, current_greeks
 from sota.selectors.base import PortfolioView, PricedCandidate, Selector, SelectorUnavailable
+
+log = logging.getLogger(__name__)
 
 SHARE_HALF_SPREAD = 1e-4  # 1 bp (paper Table 10)
 
@@ -350,12 +353,22 @@ class TradingEnv:
 
     def run(self, dates: Sequence[date], selector: Selector | None) -> BacktestResult:
         aborted: str | None = None
-        for d in dates:
+        for i, d in enumerate(dates, 1):
             try:
-                self.step(d, selector)
+                step = self.step(d, selector)
             except SelectorUnavailable as exc:
                 aborted = f"{d}: {exc}"
                 break
+            log.info(
+                "%s day %d/%d nav=%.0f open=%d opened=%d closed=%d",
+                d,
+                i,
+                len(dates),
+                step.nav,
+                len(self.open_positions),
+                len(step.opened),
+                len(step.closed),
+            )
             if self.ruined:
                 break
         return BacktestResult(
