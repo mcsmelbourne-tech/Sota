@@ -203,6 +203,7 @@ class ThetaDataSource:
         self._throttle = _Throttle(settings.requests_per_minute)
         self._chains: OrderedDict[tuple[str, date], Chain] = OrderedDict()
         self._no_data: set[tuple[str, date]] = set()
+        self._gaps_tried: set[tuple[str, date, date]] = set()
 
     # ------------------------------------------------------------------ transport
     @property
@@ -363,12 +364,33 @@ class ThetaDataSource:
         return self._closes_cache[underlying]
 
     def ensure_closes(self, underlying: str, start: date, end: date) -> None:
-        have = {d for d, _ in self._closes(underlying)}
-        if have and min(have) <= start and max(have) >= end:
-            return
-        series = self.fetch_closes(underlying, start - timedelta(days=5), end)
-        if series:
-            self.store.save_closes(underlying, series)
+        """Make the cached closes contiguous over [start, end]; fills interior gaps, not only the ends."""
+        closes = self._closes(underlying)
+        lead = timedelta(days=5)
+        one = timedelta(days=1)
+        need: list[tuple[date, date]] = []
+        if not closes:
+            need.append((start - lead, end))
+        else:
+            first, last = closes[0][0], closes[-1][0]
+            if start < first:
+                need.append((start - lead, first - one))
+            if end > last:
+                need.append((last + one, end))
+            for (d0, _), (d1, _) in zip(closes, closes[1:], strict=False):
+                # a long weekend plus a holiday is at most 5 days; anything longer is a hole
+                if (d1 - d0).days > 7 and d0 < end and d1 > start:
+                    need.append((d0 + one, d1 - one))
+        fetched_any = False
+        for a, b in need:
+            if (underlying, a, b) in self._gaps_tried:
+                continue
+            self._gaps_tried.add((underlying, a, b))
+            series = self.fetch_closes(underlying, a, b)
+            if series:
+                self.store.save_closes(underlying, series)
+                fetched_any = True
+        if fetched_any:
             self._closes_cache[underlying] = self.store.load_closes(underlying)
 
     def get_closes(self, underlying: str, asof: date, n: int) -> list[float]:

@@ -197,6 +197,38 @@ def test_fetch_closes_chunks_long_ranges(tmp_path):
     )  # contiguous, no overlap
 
 
+def test_ensure_closes_fills_interior_gaps(tmp_path):
+    """A cache that covers both ends but has a hole in the middle must fetch the hole."""
+
+    class CalendarTransport(FakeTransport):
+        def fetch(self, endpoint, **params):
+            self.calls.append((endpoint, params))
+            if endpoint != "stock_history_eod":
+                return list(self.rows[endpoint])
+            d, out = params["start_date"], []
+            while d <= params["end_date"]:
+                if d.weekday() < 5:
+                    out.append(
+                        {"created": datetime.combine(d, datetime.min.time()), "close": 100.0}
+                    )
+                d += timedelta(days=1)
+            return out
+
+    transport = CalendarTransport("library")
+    src = ThetaDataSource(ThetaSettings(), tmp_path, transport=transport)
+    # seed a cache with a one-year hole, as a stale cache plus a fresh end-of-range probe produces
+    src.store.save_closes(
+        "AAPL", [(date(2024, 10, 1), 1.0), (date(2024, 10, 2), 1.0), (date(2025, 10, 1), 1.0)]
+    )
+    src.ensure_closes("AAPL", date(2024, 10, 1), date(2025, 10, 1))
+    days = src.trading_days("AAPL", date(2024, 10, 1), date(2025, 10, 1))
+    assert len(days) > 250, "the hole was filled"
+    assert all((b - a).days <= 4 for a, b in zip(days, days[1:], strict=False))
+    n = len(transport.calls)
+    src.ensure_closes("AAPL", date(2024, 10, 1), date(2025, 10, 1))
+    assert len(transport.calls) == n, "a contiguous range is not re-fetched"
+
+
 def test_cache_only_source_needs_no_credentials(tmp_path):
     src = ThetaDataSource(ThetaSettings(transport="library"), tmp_path)
     assert src._transport is None  # created lazily on first network call
