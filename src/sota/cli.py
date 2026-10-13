@@ -129,6 +129,7 @@ def sizing(
     nav: float = typer.Option(..., help="Account size to size for"),
     asof: DateOpt = None,
     synthetic: bool = False,
+    tradable_only: bool = typer.Option(False, help="Hide structures that resolve to 0 contracts"),
 ) -> None:
     """What the resolvers would trade at this account size: units per family/tenor and why not."""
     import math
@@ -170,6 +171,8 @@ def sizing(
     tradable = total = 0
     for u, chain in chains.items():
         for code, spec in FAMILIES.items():
+            if lim.families is not None and code not in lim.families:
+                continue
             side = Side.LONG
             for tenor in (Tenor.T8_30, Tenor.T31_90):
                 pkg = resolve_package(
@@ -182,21 +185,24 @@ def sizing(
                 )
                 total += 1
                 if pkg is None:
-                    table.add_row(
-                        u,
-                        f"{code} {spec.name}",
-                        tenor.value,
-                        "-",
-                        "-",
-                        "-",
-                        "0",
-                        "no liquid contracts",
-                    )
+                    if not tradable_only:
+                        table.add_row(
+                            u,
+                            f"{code} {spec.name}",
+                            tenor.value,
+                            "-",
+                            "-",
+                            "-",
+                            "0",
+                            "no liquid contracts",
+                        )
                     continue
                 res = resolve_size(
                     pkg, chain.spot, atm_iv.get(u, DEFAULT_ATM_IV), lim, PortfolioRisk(nav=nav), d
                 )
                 tradable += res.accepted
+                if tradable_only and not res.accepted:
+                    continue
                 ml = "unbounded" if pkg.max_loss is None else f"${pkg.max_loss * 100:,.0f}"
                 style = "" if res.accepted else "dim"
                 table.add_row(
