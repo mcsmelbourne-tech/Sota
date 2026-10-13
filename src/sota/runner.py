@@ -22,7 +22,13 @@ from sota.notify.base import Notifier
 from sota.pipeline import atm_iv_map, compute_state, load_chains, price_candidates
 from sota.resolvers.hedge import hedge_trade
 from sota.risk import current_greeks
-from sota.selectors.base import PortfolioView, PricedCandidate, Proposal, Selector
+from sota.selectors.base import (
+    PortfolioView,
+    PricedCandidate,
+    Proposal,
+    Selector,
+    SelectorUnavailable,
+)
 
 log = logging.getLogger(__name__)
 
@@ -209,18 +215,25 @@ class Runner:
         view = PortfolioView(asof, nav, acct.cash, positions, marks)
         atm_iv = atm_iv_map(features)
 
-        report.proposals = self.selector.propose(features, view)
-        report.candidates = price_candidates(
-            report.proposals,
-            chains,
-            atm_iv,
-            nav,
-            positions,
-            self.journal.hedge_shares(self.mode),
-            self.limits,
-        )
-        report.chosen = self.selector.decide(report.candidates, view, self.limits.max_order_lines)
-        self.execute(report.chosen, asof, report)
+        try:
+            report.proposals = self.selector.propose(features, view)
+            report.candidates = price_candidates(
+                report.proposals,
+                chains,
+                atm_iv,
+                nav,
+                positions,
+                self.journal.hedge_shares(self.mode),
+                self.limits,
+            )
+            report.chosen = self.selector.decide(
+                report.candidates, view, self.limits.max_order_lines
+            )
+            self.execute(report.chosen, asof, report)
+        except SelectorUnavailable as exc:
+            # Exits were already managed above; only new entries are skipped today.
+            report.notes.append(f"SELECTOR UNAVAILABLE, no new positions: {exc}")
+            log.error("selector unavailable: %s", exc)
 
         if not self.is_live and self.limits.hedge:
             self.rebalance_hedges(positions + report.opened, chains, nav, report)

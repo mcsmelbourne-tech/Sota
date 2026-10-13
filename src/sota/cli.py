@@ -328,8 +328,16 @@ def backtest(
         sel = build_selector(s, source, name)
         result = env.run(dates, sel)
         m = compute_metrics(result.nav_values, result.trade_pnls(), rf=s.risk_free_rate).as_row()
+        label = name
+        if result.aborted:
+            covered = f"{len(result.nav)}/{len(dates)} days"
+            label = f"{name} [ABORTED {covered}]"
+            console.print(
+                f"[red]{name}: selector unavailable after {covered}; metrics below are partial "
+                f"and must not be compared with complete runs.[/red]\n[red]  {result.aborted}[/red]"
+            )
         table.add_row(
-            name,
+            label,
             m["TR"],
             m["ASR"],
             m["ACR"],
@@ -339,6 +347,7 @@ def backtest(
             m["WR"],
             m["PLR"],
             m["trades"],
+            style="dim" if result.aborted else "",
         )
         if usage := getattr(sel, "usage", None):
             console.print(f"[dim]{name}: {usage.summary()}[/dim]")

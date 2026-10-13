@@ -12,6 +12,14 @@ from sota.models import Package, Position, Side, Tenor
 Action = Literal["open", "close"]
 
 
+class SelectorUnavailable(RuntimeError):
+    """The selector cannot make decisions at all (quota exhausted, bad credentials, unknown model).
+
+    Unlike a transient failure, retrying tomorrow with the same configuration will not help, so
+    callers must surface it instead of silently trading as if the selector had proposed nothing.
+    """
+
+
 @dataclass(slots=True)
 class Proposal:
     """A strategy decision (u, f, omega, theta, kappa) before contract resolution."""

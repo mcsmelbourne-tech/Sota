@@ -16,7 +16,7 @@ from sota.pipeline import DEFAULT_ATM_IV, atm_iv_map, compute_state, load_chains
 from sota.resolvers.hedge import hedge_trade
 from sota.resolvers.size import resolve_size
 from sota.risk import build_portfolio_risk, current_greeks
-from sota.selectors.base import PortfolioView, PricedCandidate, Selector
+from sota.selectors.base import PortfolioView, PricedCandidate, Selector, SelectorUnavailable
 
 SHARE_HALF_SPREAD = 1e-4  # 1 bp (paper Table 10)
 
@@ -51,6 +51,7 @@ class BacktestResult:
     trades: list[Trade]
     positions: list[Position]
     rewards: list[float] = field(default_factory=list)
+    aborted: str | None = None  # set when the selector became unavailable before the last date
 
     @property
     def nav_values(self) -> list[float]:
@@ -348,10 +349,19 @@ class TradingEnv:
         return StepResult(asof, nav_new, reward, opened, closed, features)
 
     def run(self, dates: Sequence[date], selector: Selector | None) -> BacktestResult:
+        aborted: str | None = None
         for d in dates:
-            self.step(d, selector)
+            try:
+                self.step(d, selector)
+            except SelectorUnavailable as exc:
+                aborted = f"{d}: {exc}"
+                break
             if self.ruined:
                 break
         return BacktestResult(
-            list(self.nav_history), list(self.trades), list(self.positions), list(self.rewards)
+            list(self.nav_history),
+            list(self.trades),
+            list(self.positions),
+            list(self.rewards),
+            aborted,
         )

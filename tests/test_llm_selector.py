@@ -81,13 +81,49 @@ def test_propose_sends_openai_request_and_parses_candidates() -> None:
     assert "SPY" not in body["messages"][1]["content"]  # anonymized
 
 
-def test_http_error_degrades_to_no_proposals() -> None:
+def test_permanent_errors_raise_selector_unavailable() -> None:
+    """Quota/credential failures must stop the run, not masquerade as 'no edge today'."""
+    from sota.selectors.base import SelectorUnavailable
+
+    calls: list[int] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, json={"error": "bad key"})
+        calls.append(1)
+        return httpx.Response(
+            403, json={"code": "permission-denied", "error": "used all available credits"}
+        )
 
     sel = _selector(handler)
-    assert sel.propose({"SPY": _features()}, _view()) == []
-    assert sel.usage.failures == 1 and sel.usage.retries == 0, "401 is not retried"
+    with pytest.raises(SelectorUnavailable, match="used all available credits"):
+        sel.propose({"SPY": _features()}, _view())
+    assert len(calls) == 1 and sel.usage.retries == 0, "403 is not retried"
+    assert sel.disabled and "403" in sel.disabled
+
+    with pytest.raises(SelectorUnavailable):
+        sel.propose({"SPY": _features()}, _view())
+    assert len(calls) == 1, "once disabled, the selector stops calling the API"
+
+
+def test_backtest_aborts_when_selector_becomes_unavailable(source) -> None:
+    from datetime import timedelta
+
+    from sota.backtest.env import TradingEnv
+    from sota.config import Costs
+
+    budget = {"left": 3}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if budget["left"] <= 0:
+            return httpx.Response(403, json={"error": "credits exhausted"})
+        budget["left"] -= 1
+        return _ok({"candidates": []})
+
+    sel = _selector(handler)
+    env = TradingEnv(source, ["AAA", "BBB"], RiskLimits(), Costs(), 1_000_000)
+    dates = source.trading_days("AAA", source.start, source.start + timedelta(days=60))[:10]
+    result = env.run(dates, sel)
+    assert result.aborted is not None and "credits exhausted" in result.aborted
+    assert len(result.nav) == 3, "NAV history stops at the last fully decided day"
 
 
 def _ok(reply: dict) -> httpx.Response:

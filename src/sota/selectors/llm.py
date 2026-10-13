@@ -22,13 +22,33 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from sota.config import LLMSettings, RiskLimits
 from sota.features import MarketFeatures
 from sota.models import Side, Tenor
-from sota.selectors.base import BaseSelector, PortfolioView, PricedCandidate, Proposal
+from sota.selectors.base import (
+    BaseSelector,
+    PortfolioView,
+    PricedCandidate,
+    Proposal,
+    SelectorUnavailable,
+)
 from sota.strategies.families import FAMILIES, describe_families
 
 log = logging.getLogger(__name__)
 
 _CHAT_ERRORS = (httpx.HTTPError, ValidationError, ValueError, KeyError)
 _RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
+_PERMANENT_STATUS = {401, 402, 403, 404}  # credentials, billing/quota, unknown model
+
+
+def _error_text(r: httpx.Response) -> str:
+    try:
+        body = r.json()
+        msg = body.get("error") if isinstance(body, dict) else None
+        if isinstance(msg, dict):
+            msg = msg.get("message")
+        if msg:
+            return str(msg)[:300]
+    except ValueError:
+        pass
+    return r.text[:300]
 
 
 class CandidateModel(BaseModel):
@@ -143,6 +163,7 @@ class LLMSelector(BaseSelector):
         self.usage = Usage()
         self._sleep = sleep
         self._cache_dir = Path(settings.cache_dir) if settings.cache_dir else None
+        self.disabled: str | None = None  # reason, once a permanent error has been seen
 
     # ------------------------------------------------------------------ transport
     def _request_body(self, user: str) -> dict[str, Any]:
@@ -174,6 +195,9 @@ class LLMSelector(BaseSelector):
         for attempt in range(self.settings.max_retries + 1):
             try:
                 r = self.client.post(url, json=body, headers=headers)
+                if r.status_code in _PERMANENT_STATUS:
+                    self.disabled = f"HTTP {r.status_code} from {url}: {_error_text(r)}"
+                    raise SelectorUnavailable(self.disabled)
                 if r.status_code in _RETRY_STATUS:
                     raise httpx.HTTPStatusError(
                         f"{r.status_code}: {r.text[:200]}", request=r.request, response=r
@@ -197,6 +221,8 @@ class LLMSelector(BaseSelector):
         raise RuntimeError("unreachable")
 
     def _chat(self, user: str) -> dict[str, Any]:
+        if self.disabled:
+            raise SelectorUnavailable(self.disabled)
         body = self._request_body(user)
         path = self._cache_path(body)
         self.usage.calls += 1

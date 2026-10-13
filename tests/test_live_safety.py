@@ -114,6 +114,32 @@ def test_live_runner_does_not_duplicate_close_tickets(settings, source):
     assert not [x for x in third.tickets if x.intent == "close"]
 
 
+def test_runner_manages_exits_when_selector_unavailable(settings, source):
+    """A dead LLM must block new entries but never orphan open positions."""
+    from sota.selectors.base import SelectorUnavailable
+
+    class Dead(BaseSelector):
+        name = "dead"
+
+        def propose(self, features, portfolio):
+            raise SelectorUnavailable("HTTP 403: credits exhausted")
+
+    live = settings.model_copy(update={"mode": Mode.LIVE})
+    journal = Journal(":memory:")
+    broker = ManualTicketBroker(journal, LogNotifier(), 100_000.0, live.effective_costs)
+    first = Runner(live, source, AlwaysOpen(), broker, journal, LogNotifier()).run_once(
+        source.start
+    )
+    pos = broker.confirm(first.tickets[0].id, first.tickets[0].limit_price, asof=source.start)
+    pos.force_close_date = source.start
+    journal.save_position(pos, "live")
+
+    report = Runner(live, source, Dead(), broker, journal, LogNotifier()).run_once(source.start)
+    assert not [x for x in report.tickets if x.intent == "open"]
+    assert [x.position_id for x in report.tickets if x.intent == "close"] == [pos.id]
+    assert any("SELECTOR UNAVAILABLE" in n and "credits exhausted" in n for n in report.notes)
+
+
 def test_priced_candidate_dataclass(chain):
     pkg = resolve_package(chain, "ol", Side.LONG, Tenor.T8_30)
     cand = PricedCandidate(Proposal("AAA", "ol", Side.LONG, Tenor.T8_30), pkg, 3, 100.0, 500.0)
