@@ -307,6 +307,8 @@ class ThetaDataSource:
         if key in self._chains:
             self._chains.move_to_end(key)
             return self._chains[key]
+        if asof < self.settings.history_start:
+            return None
         if key in self._no_data or self._is_trading_day(underlying, asof) is False:
             return None
 
@@ -344,7 +346,7 @@ class ThetaDataSource:
 
     def fetch_closes(self, underlying: str, start: date, end: date) -> list[tuple[date, float]]:
         out: list[tuple[date, float]] = []
-        chunk_start = start
+        chunk_start = max(start, self.settings.history_start)
         while chunk_start <= end:
             chunk_end = min(chunk_start + timedelta(days=self.MAX_EOD_SPAN_DAYS - 1), end)
             rows = self._rows(
@@ -365,6 +367,9 @@ class ThetaDataSource:
 
     def ensure_closes(self, underlying: str, start: date, end: date) -> None:
         """Make the cached closes contiguous over [start, end]; fills interior gaps, not only the ends."""
+        start = max(start, self.settings.history_start)
+        if end < start:
+            return
         closes = self._closes(underlying)
         lead = timedelta(days=5)
         one = timedelta(days=1)

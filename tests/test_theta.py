@@ -229,6 +229,20 @@ def test_ensure_closes_fills_interior_gaps(tmp_path):
     assert len(transport.calls) == n, "a contiguous range is not re-fetched"
 
 
+def test_requests_are_clamped_to_the_subscription_floor(tmp_path):
+    """Free tier: anything before 2023-06-01 is a hard 403, so never ask for it."""
+    transport = FakeTransport("library")
+    floor = date(2023, 6, 1)
+    src = ThetaDataSource(ThetaSettings(history_start=floor), tmp_path, transport=transport)
+    src.ensure_closes("AAPL", floor - timedelta(days=50), floor + timedelta(days=30))
+    starts = [p["start_date"] for e, p in transport.calls if e == "stock_history_eod"]
+    assert starts and all(s >= floor for s in starts)
+    n = len(transport.calls)
+    src.ensure_closes("AAPL", date(2022, 1, 1), date(2022, 12, 31))
+    assert src.get_chain("AAPL", date(2022, 6, 1)) is None
+    assert len(transport.calls) == n, "a range entirely below the floor makes no request"
+
+
 def test_cache_only_source_needs_no_credentials(tmp_path):
     src = ThetaDataSource(ThetaSettings(transport="library"), tmp_path)
     assert src._transport is None  # created lazily on first network call

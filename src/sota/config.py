@@ -5,6 +5,7 @@ Nested fields use `__`, e.g. `SOTA_ALPACA__API_KEY=...`, `SOTA_LIMITS__MAX_POSIT
 
 from __future__ import annotations
 
+from datetime import date
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
@@ -86,6 +87,8 @@ class ThetaSettings(BaseModel):
     base_url: str = "http://127.0.0.1:25503/v3"  # rest
     timeout_s: float = 120.0
     requests_per_minute: int = 20  # Free tier cap; paid tiers limit concurrency instead, so use 0
+    # Earliest date the subscription can serve; requests before it are a hard 403 on Free.
+    history_start: date = date(2023, 6, 1)  # Value: 2020-01-01, Standard: 2016-01-01
 
 
 class LLMSettings(BaseModel):
