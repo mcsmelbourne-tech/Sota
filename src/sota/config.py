@@ -89,11 +89,12 @@ class ThetaSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    """Any OpenAI-compatible chat-completions endpoint (OpenAI, OpenRouter, Ollama, vLLM)."""
+    """Any OpenAI-compatible chat-completions endpoint (OpenAI, xAI, OpenRouter, Ollama, vLLM)."""
 
     base_url: str = "https://api.openai.com/v1"
     api_key: SecretStr | None = None
     model: str = "gpt-4.1"
+    reasoning_effort: Literal["low", "medium", "high", "xhigh"] | None = None
     temperature: float = 0.2
     timeout_s: float = 120.0
 

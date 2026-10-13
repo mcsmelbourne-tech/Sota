@@ -22,6 +22,8 @@ from sota.strategies.families import FAMILIES, describe_families
 
 log = logging.getLogger(__name__)
 
+_CHAT_ERRORS = (httpx.HTTPError, ValidationError, ValueError, KeyError)
+
 
 class CandidateModel(BaseModel):
     asset: str
@@ -51,6 +53,14 @@ class StageTwoResponse(BaseModel):
 
 def _round(x: float, nd: int = 4) -> float | None:
     return None if x is None or math.isnan(x) else round(x, nd)
+
+
+def _parse_json(text: str) -> dict[str, Any]:
+    """Outermost JSON object in a reply; tolerates code fences or prose around it."""
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end < start:
+        raise ValueError("no JSON object in model reply")
+    return json.loads(text[start : end + 1])
 
 
 SYSTEM_PROMPT = f"""You are an options strategist selecting option structures for a risk-managed portfolio.
@@ -92,7 +102,7 @@ class LLMSelector(BaseSelector):
         headers = {"Content-Type": "application/json"}
         if self.settings.api_key is not None:
             headers["Authorization"] = f"Bearer {self.settings.api_key.get_secret_value()}"
-        body = {
+        body: dict[str, Any] = {
             "model": self.settings.model,
             "temperature": self.settings.temperature,
             "response_format": {"type": "json_object"},
@@ -101,12 +111,22 @@ class LLMSelector(BaseSelector):
                 {"role": "user", "content": user},
             ],
         }
+        if self.settings.reasoning_effort:
+            body["reasoning_effort"] = self.settings.reasoning_effort
         r = self.client.post(
             f"{self.settings.base_url.rstrip('/')}/chat/completions", json=body, headers=headers
         )
         r.raise_for_status()
-        content = r.json()["choices"][0]["message"]["content"]
-        return json.loads(content)
+        data = r.json()
+        if usage := data.get("usage"):
+            log.info(
+                "llm usage model=%s in=%s out=%s reasoning=%s",
+                data.get("model"),
+                usage.get("prompt_tokens"),
+                usage.get("completion_tokens"),
+                (usage.get("completion_tokens_details") or {}).get("reasoning_tokens"),
+            )
+        return _parse_json(data["choices"][0]["message"]["content"])
 
     # ------------------------------------------------------------------ anonymization
     @staticmethod
@@ -162,7 +182,7 @@ class LLMSelector(BaseSelector):
         )
         try:
             parsed = StageOneResponse.model_validate(self._chat(user))
-        except (httpx.HTTPError, ValidationError, ValueError, KeyError) as exc:
+        except _CHAT_ERRORS as exc:
             log.warning("LLM stage-1 failed: %s", exc)
             return []
 
@@ -229,7 +249,7 @@ class LLMSelector(BaseSelector):
         )
         try:
             parsed = StageTwoResponse.model_validate(self._chat(user))
-        except (httpx.HTTPError, ValidationError, ValueError, KeyError) as exc:
+        except _CHAT_ERRORS as exc:
             log.warning("LLM stage-2 failed, falling back to first %d: %s", max_lines, exc)
             return candidates[:max_lines]
         chosen = [candidates[i] for i in dict.fromkeys(parsed.chosen) if 0 <= i < len(candidates)]
