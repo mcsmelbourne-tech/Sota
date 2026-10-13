@@ -5,7 +5,7 @@ Coordinates are |delta| targets on a 0.05 grid; the contract resolver turns them
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -204,9 +204,12 @@ def normalize_coords(
     return out
 
 
-def describe_families() -> str:
+def describe_families(codes: Iterable[str] | None = None) -> str:
+    allowed = None if codes is None else set(codes)
     lines = []
     for f in FAMILIES.values():
+        if allowed is not None and f.code not in allowed:
+            continue
         coords = ", ".join(f"{c.name}={c.default:g} [{c.lo:g}-{c.hi:g}]" for c in f.coords)
         lines.append(f"- {f.code} ({f.name}, {f.category}): {f.summary} Coords: {coords}")
     return "\n".join(lines)

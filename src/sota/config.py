@@ -95,8 +95,10 @@ class LLMSettings(BaseModel):
     api_key: SecretStr | None = None
     model: str = "gpt-4.1"
     reasoning_effort: Literal["low", "medium", "high", "xhigh"] | None = None
-    temperature: float = 0.2
+    temperature: float = 0.0  # paper evaluates at 0; also keeps the response cache meaningful
     timeout_s: float = 120.0
+    max_retries: int = 4  # on 408/429/5xx and transport errors, exponential backoff
+    cache_dir: Path | None = Path("data/llm_cache")  # replies keyed by request hash; None disables
 
 
 class NotifySettings(BaseModel):

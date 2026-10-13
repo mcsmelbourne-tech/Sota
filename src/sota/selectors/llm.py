@@ -6,9 +6,14 @@ masked; news is excluded by default. Works with any OpenAI-compatible chat-compl
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal
 
 import httpx
@@ -23,6 +28,7 @@ from sota.strategies.families import FAMILIES, describe_families
 log = logging.getLogger(__name__)
 
 _CHAT_ERRORS = (httpx.HTTPError, ValidationError, ValueError, KeyError)
+_RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
 
 
 class CandidateModel(BaseModel):
@@ -63,25 +69,61 @@ def _parse_json(text: str) -> dict[str, Any]:
     return json.loads(text[start : end + 1])
 
 
-SYSTEM_PROMPT = f"""You are an options strategist selecting option structures for a risk-managed portfolio.
+@dataclass
+class Usage:
+    """Per-session ledger so a backtest can report what the selector cost."""
+
+    calls: int = 0
+    cache_hits: int = 0
+    retries: int = 0
+    failures: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    reasoning_tokens: int = 0
+    seconds: float = 0.0
+    models: set[str] = field(default_factory=set)
+
+    def summary(self) -> str:
+        return (
+            f"{self.calls} calls ({self.cache_hits} cached, {self.retries} retries, "
+            f"{self.failures} failed), {self.prompt_tokens:,} in / {self.completion_tokens:,} out "
+            f"(+{self.reasoning_tokens:,} reasoning) tokens, {self.seconds / 60:.1f} min, "
+            f"model {', '.join(sorted(self.models)) or '?'}"
+        )
+
+
+def build_system_prompt(limits: RiskLimits | None = None) -> str:
+    """System prompt describing exactly the strategy space the resolvers will accept."""
+    codes = limits.families if limits is not None and limits.families else None
+    hedged = limits.hedge if limits is not None else True
+    hedge_line = (
+        "and delta-hedge volatility families with shares"
+        if hedged
+        else "but do NOT delta-hedge: long straddles/strangles become directional bets as spot moves"
+    )
+    return f"""You are an options strategist selecting option structures for a risk-managed portfolio.
 You see anonymized per-asset market states built from the option-implied return distribution.
 Prices, tickers and dates are masked on purpose; reason only from the numbers given.
 
 Features per asset: ret (session log return), rv (21d realized vol), iv (30d ATM implied vol),
 dv (change in iv), wedge (iv - rv), ts (90d - 30d ATM iv; negative = backwardation),
 sk (25d put iv - 25d call iv), bf (25d butterfly curvature), fi (option flow imbalance),
-doi (change in open interest), iv_rv (iv / rv), sk_iv, bf_iv.
+doi (change in open interest), iv_rv (iv / rv), sk_iv, bf_iv. A null means unavailable.
 
-Strategy families (code, category, meaning, default coordinates [admitted range]):
-{describe_families()}
+Strategy families you may use (code, category, meaning, default coordinates [admitted range]):
+{describe_families(codes)}
 
 Tenor buckets (calendar days to expiry): "0-7", "8-30", "31-90", "91-180".
 Side: for directional families "long" = bullish, "short" = bearish; for ls/lg/ib/ic it is ignored;
 for bf "long" uses calls, "short" uses puts.
 
 Deterministic resolvers will choose exact strikes, size every position to equal scenario risk,
-and delta-hedge volatility families. Favor defined-risk structures; propose nothing for an asset
-when there is no edge. Respond with JSON only."""
+{hedge_line}. Positions carry a 60%-of-premium stop and are closed one day before expiry.
+Every trade pays the bid-ask spread, so trade only when the edge clearly exceeds it; proposing
+nothing for an asset is a valid and common answer. Respond with JSON only."""
+
+
+SYSTEM_PROMPT = build_system_prompt()
 
 
 class LLMSelector(BaseSelector):
@@ -92,39 +134,102 @@ class LLMSelector(BaseSelector):
         settings: LLMSettings,
         limits: RiskLimits,
         client: httpx.Client | None = None,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.settings = settings
         self.limits = limits
         self.client = client or httpx.Client(timeout=settings.timeout_s)
+        self.system_prompt = build_system_prompt(limits)
+        self.usage = Usage()
+        self._sleep = sleep
+        self._cache_dir = Path(settings.cache_dir) if settings.cache_dir else None
 
     # ------------------------------------------------------------------ transport
-    def _chat(self, user: str) -> dict[str, Any]:
-        headers = {"Content-Type": "application/json"}
-        if self.settings.api_key is not None:
-            headers["Authorization"] = f"Bearer {self.settings.api_key.get_secret_value()}"
+    def _request_body(self, user: str) -> dict[str, Any]:
         body: dict[str, Any] = {
             "model": self.settings.model,
             "temperature": self.settings.temperature,
             "response_format": {"type": "json_object"},
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user},
             ],
         }
         if self.settings.reasoning_effort:
             body["reasoning_effort"] = self.settings.reasoning_effort
-        r = self.client.post(
-            f"{self.settings.base_url.rstrip('/')}/chat/completions", json=body, headers=headers
-        )
-        r.raise_for_status()
-        data = r.json()
+        return body
+
+    def _cache_path(self, body: dict[str, Any]) -> Path | None:
+        if self._cache_dir is None:
+            return None
+        digest = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+        return self._cache_dir / digest[:2] / f"{digest}.json"
+
+    def _post(self, body: dict[str, Any]) -> dict[str, Any]:
+        headers = {"Content-Type": "application/json"}
+        if self.settings.api_key is not None:
+            headers["Authorization"] = f"Bearer {self.settings.api_key.get_secret_value()}"
+        url = f"{self.settings.base_url.rstrip('/')}/chat/completions"
+        delay = 2.0
+        for attempt in range(self.settings.max_retries + 1):
+            try:
+                r = self.client.post(url, json=body, headers=headers)
+                if r.status_code in _RETRY_STATUS:
+                    raise httpx.HTTPStatusError(
+                        f"{r.status_code}: {r.text[:200]}", request=r.request, response=r
+                    )
+                r.raise_for_status()
+                return r.json()
+            except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if attempt == self.settings.max_retries or (
+                    status is not None and status not in _RETRY_STATUS
+                ):
+                    raise
+                self.usage.retries += 1
+                retry_after = getattr(exc, "response", None)
+                wait = delay
+                if retry_after is not None and retry_after.headers.get("retry-after", "").isdigit():
+                    wait = max(wait, float(retry_after.headers["retry-after"]))
+                log.warning("llm request failed (%s); retry %d in %.0fs", exc, attempt + 1, wait)
+                self._sleep(wait)
+                delay *= 2
+        raise RuntimeError("unreachable")
+
+    def _chat(self, user: str) -> dict[str, Any]:
+        body = self._request_body(user)
+        path = self._cache_path(body)
+        self.usage.calls += 1
+        if path is not None and path.exists():
+            self.usage.cache_hits += 1
+            data = json.loads(path.read_text())
+        else:
+            t0 = time.monotonic()
+            try:
+                data = self._post(body)
+            except Exception:
+                self.usage.failures += 1
+                raise
+            finally:
+                self.usage.seconds += time.monotonic() - t0
+            if path is not None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_suffix(".tmp")
+                tmp.write_text(json.dumps(data))
+                tmp.replace(path)
+        if model := data.get("model"):
+            self.usage.models.add(str(model))
         if usage := data.get("usage"):
+            details = usage.get("completion_tokens_details") or {}
+            self.usage.prompt_tokens += int(usage.get("prompt_tokens") or 0)
+            self.usage.completion_tokens += int(usage.get("completion_tokens") or 0)
+            self.usage.reasoning_tokens += int(details.get("reasoning_tokens") or 0)
             log.info(
                 "llm usage model=%s in=%s out=%s reasoning=%s",
                 data.get("model"),
                 usage.get("prompt_tokens"),
                 usage.get("completion_tokens"),
-                (usage.get("completion_tokens_details") or {}).get("reasoning_tokens"),
+                details.get("reasoning_tokens"),
             )
         return _parse_json(data["choices"][0]["message"]["content"])
 

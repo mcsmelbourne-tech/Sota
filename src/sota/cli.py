@@ -325,7 +325,8 @@ def backtest(
         table.add_column(col, justify="right")
     for name in selector:
         env = TradingEnv(source, s.universe, s.limits, s.effective_costs, nav or s.initial_nav)
-        result = env.run(dates, build_selector(s, source, name))
+        sel = build_selector(s, source, name)
+        result = env.run(dates, sel)
         m = compute_metrics(result.nav_values, result.trade_pnls(), rf=s.risk_free_rate).as_row()
         table.add_row(
             name,
@@ -339,6 +340,8 @@ def backtest(
             m["PLR"],
             m["trades"],
         )
+        if usage := getattr(sel, "usage", None):
+            console.print(f"[dim]{name}: {usage.summary()}[/dim]")
     console.print(table)
 
 
