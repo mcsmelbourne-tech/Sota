@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from sota.backtest.env import TradingEnv
+from sota.backtest.env import BacktestResult, TradingEnv
 from sota.backtest.metrics import compute_metrics
 from sota.config import Mode, Settings
 from sota.factory import build_runner, build_selector, build_source
@@ -308,6 +309,10 @@ def backtest(
     ] = ["threshold"],  # noqa: B006
     synthetic: bool = typer.Option(False, help="Use the synthetic market instead of Theta Data"),
     nav: float | None = None,
+    out: Annotated[
+        Path | None,
+        typer.Option(help="Directory for <selector>_positions.csv and <selector>_nav.csv"),
+    ] = None,
 ) -> None:
     """Run the point-in-time environment over a date range and report the paper's eight metrics."""
     s = _settings("backtest")
@@ -351,7 +356,45 @@ def backtest(
         )
         if usage := getattr(sel, "usage", None):
             console.print(f"[dim]{name}: {usage.summary()}[/dim]")
+        if out is not None:
+            _write_backtest_csv(out, name, result)
     console.print(table)
+
+
+def _write_backtest_csv(out: Path, name: str, result: BacktestResult) -> None:
+    import csv
+
+    out.mkdir(parents=True, exist_ok=True)
+    with (out / f"{name}_positions.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(
+            "id underlying family side tenor entry_date exit_date status units entry exit "
+            "fees pnl rationale".split()
+        )
+        for p in result.positions:
+            w.writerow(
+                [
+                    p.id,
+                    p.package.underlying,
+                    p.package.family,
+                    p.package.side.value,
+                    p.package.tenor.value,
+                    p.entry_date,
+                    p.exit_date or "",
+                    p.status,
+                    p.units,
+                    f"{p.entry_premium:.4f}",
+                    "" if p.exit_premium is None else f"{p.exit_premium:.4f}",
+                    f"{p.fees_paid:.2f}",
+                    "" if p.realized_pnl is None else f"{p.realized_pnl:.2f}",
+                    p.tags.get("rationale", ""),
+                ]
+            )
+    with (out / f"{name}_nav.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["date", "nav"])
+        w.writerows((d, f"{v:.2f}") for d, v in result.nav)
+    console.print(f"[dim]{name}: wrote {out / f'{name}_positions.csv'}[/dim]")
 
 
 @app.command()
