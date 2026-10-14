@@ -305,7 +305,12 @@ def backtest(
     start: str,
     end: str,
     selector: Annotated[
-        list[str], typer.Option("--selector", "-s", help="threshold | llm | oracle (repeatable)")
+        list[str],
+        typer.Option(
+            "--selector",
+            "-s",
+            help="threshold | llm | oracle | replay:<proposals.json> (repeatable)",
+        ),
     ] = ["threshold"],  # noqa: B006
     synthetic: bool = typer.Option(False, help="Use the synthetic market instead of Theta Data"),
     nav: float | None = None,
@@ -363,8 +368,15 @@ def backtest(
 
 def _write_backtest_csv(out: Path, name: str, result: BacktestResult) -> None:
     import csv
+    import json
 
+    from sota.selectors.replay import proposals_from_positions
+
+    name = name.split(":", 1)[0]  # "replay:<path>" -> "replay"
     out.mkdir(parents=True, exist_ok=True)
+    (out / f"{name}_proposals.json").write_text(
+        json.dumps(proposals_from_positions(result.positions), indent=1)
+    )
     with (out / f"{name}_positions.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(

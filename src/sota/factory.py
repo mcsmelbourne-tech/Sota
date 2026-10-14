@@ -46,6 +46,10 @@ def build_selector(settings: Settings, source: ChainSource, name: str | None = N
         from sota.selectors.oracle import HindsightOracle
 
         return HindsightOracle(source, limits=settings.limits)
+    if name.startswith("replay:"):
+        from sota.selectors.replay import ReplaySelector
+
+        return ReplaySelector(name.split(":", 1)[1])
     raise ValueError(f"unknown selector {name!r}")
 
 

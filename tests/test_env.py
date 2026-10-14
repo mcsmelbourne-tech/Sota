@@ -60,6 +60,32 @@ def test_threshold_selector_runs(source):
     assert all(v > 0 for v in result.nav_values)
 
 
+def test_replay_reproduces_recorded_run_and_honours_new_rules(source, tmp_path):
+    import json
+
+    from sota.selectors.replay import ReplaySelector, proposals_from_positions
+
+    dates = _dates(source, 60)
+    original = TradingEnv(source, ["AAA", "BBB"], RiskLimits(), Costs(), 1_000_000).run(
+        dates, OneOfEach()
+    )
+    path = tmp_path / "proposals.json"
+    path.write_text(json.dumps(proposals_from_positions(original.positions)))
+
+    replay = TradingEnv(source, ["AAA", "BBB"], RiskLimits(), Costs(), 1_000_000).run(
+        dates, ReplaySelector(path)
+    )
+    assert replay.nav_values == original.nav_values
+    assert [(p.entry_date, p.package.describe()) for p in replay.positions] == [
+        (p.entry_date, p.package.describe()) for p in original.positions
+    ]
+
+    no_condors = TradingEnv(
+        source, ["AAA", "BBB"], RiskLimits(families=["ls"]), Costs(), 1_000_000
+    ).run(dates, ReplaySelector(path))
+    assert {p.package.family for p in no_condors.positions} == {"ls"}
+
+
 def test_hedging_can_be_disabled(source):
     env = TradingEnv(source, ["AAA", "BBB"], RiskLimits(hedge=False), Costs(), 1_000_000)
     result = env.run(_dates(source, 30), OneOfEach())
