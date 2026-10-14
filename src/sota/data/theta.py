@@ -25,6 +25,7 @@ from typing import Any, Protocol
 import httpx
 
 from sota.config import ThetaSettings
+from sota.data.splits import adjust_closes
 from sota.data.store import ChainStore
 from sota.models import Chain, OptionContract, Quote, Right
 
@@ -400,7 +401,8 @@ class ThetaDataSource:
 
     def get_closes(self, underlying: str, asof: date, n: int) -> list[float]:
         self.ensure_closes(underlying, asof - timedelta(days=int(n * 1.6) + 10), asof)
-        return [c for d, c in self._closes(underlying) if d <= asof][-n:]
+        series = [(d, c) for d, c in self._closes(underlying) if d <= asof][-n:]
+        return [c for _, c in adjust_closes(underlying, series, asof)]
 
     def trading_days(self, underlying: str, start: date, end: date) -> list[date]:
         self.ensure_closes(underlying, start, end)

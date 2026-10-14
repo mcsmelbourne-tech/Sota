@@ -72,6 +72,7 @@ class AlpacaChainSource:
         return Chain(underlying, asof, self.spot(underlying), quotes, rate=self.rate)
 
     def get_closes(self, underlying: str, asof: date, n: int) -> list[float]:
+        from alpaca.data.enums import Adjustment
         from alpaca.data.requests import StockBarsRequest
         from alpaca.data.timeframe import TimeFrame
 
@@ -82,6 +83,7 @@ class AlpacaChainSource:
                 timeframe=TimeFrame.Day,
                 start=datetime.combine(start, time.min),
                 end=datetime.combine(asof, time.max),
+                adjustment=Adjustment.SPLIT,
             )
         )
         series = bars.data.get(underlying, [])

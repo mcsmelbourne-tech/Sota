@@ -13,6 +13,7 @@ from datetime import date, timedelta
 
 from sota.config import Settings
 from sota.data.base import ChainSource
+from sota.data.splits import apply_splits
 from sota.execution.base import Broker, Ticket
 from sota.execution.manual import ManualTicketBroker
 from sota.features import MarketFeatures
@@ -203,6 +204,15 @@ class Runner:
         report = RunReport(asof, self.mode, nav, features)
 
         positions = self.journal.list_positions(self.mode, "open")
+        for pos in positions:
+            chain = chains.get(pos.package.underlying)
+            strikes = {c.strike for c in chain.quotes} if chain is not None else None
+            for ex, ratio in apply_splits(pos, asof, strikes):
+                self.journal.save_position(pos, self.mode)
+                report.notes.append(
+                    f"{pos.package.underlying} {ratio:g}:1 split on {ex}: position {pos.id} "
+                    f"re-expressed as {pos.units} units; verify your broker shows the same"
+                )
         self.manage_exits(positions, chains, asof, report)
         positions = [p for p in positions if p.is_open]
 

@@ -11,6 +11,7 @@ from datetime import date, timedelta
 
 from sota.config import Costs, RiskLimits
 from sota.data.base import ChainSource
+from sota.data.splits import apply_splits, splits_between
 from sota.features import MarketFeatures
 from sota.models import MULTIPLIER, Chain, Package, Position
 from sota.pipeline import DEFAULT_ATM_IV, atm_iv_map, compute_state, load_chains, price_candidates
@@ -94,6 +95,33 @@ class TradingEnv:
     @property
     def open_positions(self) -> list[Position]:
         return [p for p in self.positions if p.is_open]
+
+    def apply_splits(self, chains: dict[str, Chain], asof: date) -> None:
+        for pos in self.open_positions:
+            u = pos.package.underlying
+            chain = chains.get(u)
+            strikes = {c.strike for c in chain.quotes} if chain is not None else None
+            for ex, ratio in apply_splits(pos, asof, strikes):
+                self._last_mark[pos.id] = self._last_mark.get(pos.id, pos.entry_premium) / ratio
+                self._log(
+                    Trade(
+                        asof,
+                        pos.id,
+                        "split",
+                        u,
+                        pos.package.family,
+                        pos.units,
+                        pos.entry_premium,
+                        0.0,
+                        note=f"{ratio:g}:1 on {ex}",
+                    )
+                )
+        prev = self.nav_history[-1][0] if self.nav_history else None
+        if prev is None:
+            return
+        for u in list(self.hedge_shares):
+            for _, ratio in splits_between(u, prev, asof):
+                self.hedge_shares[u] = int(round(self.hedge_shares[u] * ratio))
 
     def _option_fee(self, pkg: Package, units: int) -> float:
         return self.costs.option_fee * pkg.contracts_per_unit * units
@@ -311,6 +339,7 @@ class TradingEnv:
         for u, chain in chains.items():
             self._last_spot[u] = chain.spot
 
+        self.apply_splits(chains, asof)
         closed = self.manage_exits(chains, asof)
         features = self.compute_state(chains, asof)
         atm_iv = atm_iv_map(features)
