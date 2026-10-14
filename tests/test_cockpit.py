@@ -170,3 +170,37 @@ def test_telegram_html_and_chat_ids():
     assert seen["body"]["parse_mode"] == "HTML"
     assert "&lt;1&gt;" in seen["body"]["text"] and "&amp;" in seen["body"]["text"]
     assert seen["body"]["text"].startswith("<b>") and "<pre>" in seen["body"]["text"]
+
+
+def test_telegram_failures_never_leak_the_token(caplog):
+    import logging
+
+    import httpx
+
+    from sota.notify.channels import TelegramError, TelegramNotifier
+
+    token = "8977:SECRET-TOKEN"
+
+    def forbidden(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            403, json={"ok": False, "description": "Forbidden: bot was blocked by the user"}
+        )
+
+    def broken(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom", request=request)
+
+    for transport in (forbidden, broken):
+        notifier = TelegramNotifier(
+            token, "42", httpx.Client(transport=httpx.MockTransport(transport))
+        )
+        with pytest.raises(TelegramError) as info:
+            notifier.send("t", "b")
+        assert "SECRET" not in str(info.value) and "api.telegram.org" not in str(info.value)
+
+    # the httpx request log line, which embeds the URL, is suppressed for Telegram only
+    with caplog.at_level(logging.INFO, logger="httpx"):
+        logging.getLogger("httpx").info(
+            'HTTP Request: POST https://api.telegram.org/bot%s/sendMessage "HTTP/1.1 200 OK"', token
+        )
+        logging.getLogger("httpx").info("HTTP Request: POST https://api.x.ai/v1/chat/completions")
+    assert "SECRET" not in caplog.text and "api.x.ai" in caplog.text

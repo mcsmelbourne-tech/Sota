@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import logging
 import smtplib
 import subprocess
 from email.message import EmailMessage
@@ -11,6 +12,13 @@ import httpx
 
 from sota.config import NotifySettings
 from sota.notify.base import LogNotifier, MultiNotifier, Notifier
+
+# httpx logs every request URL at INFO, and Telegram's URL carries the bot token.
+logging.getLogger("httpx").addFilter(lambda rec: "api.telegram.org" not in rec.getMessage())
+
+
+class TelegramError(RuntimeError):
+    pass
 
 
 class TelegramNotifier:
@@ -24,10 +32,19 @@ class TelegramNotifier:
     def send(self, title: str, body: str) -> None:
         # HTML mode: unlike Markdown, underscores and asterisks in tickers/ids never break a message.
         text = f"<b>{html.escape(title)}</b>\n<pre>{html.escape(body[:3800])}</pre>"
-        r = self.client.post(
-            self.url, json={"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
-        )
-        r.raise_for_status()
+        try:
+            r = self.client.post(
+                self.url, json={"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
+            )
+        except httpx.HTTPError as exc:  # the exception text would include the token-bearing URL
+            raise TelegramError(f"{type(exc).__name__} while sending") from None
+        if r.status_code >= 400:
+            detail = (
+                r.json().get("description", "")
+                if "json" in r.headers.get("content-type", "")
+                else ""
+            )
+            raise TelegramError(f"HTTP {r.status_code} {detail}".strip())
 
 
 def telegram_chat_ids(token: str, client: httpx.Client | None = None) -> list[tuple[str, str]]:
