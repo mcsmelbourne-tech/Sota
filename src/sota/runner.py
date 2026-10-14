@@ -222,6 +222,9 @@ class Runner:
             v = p.package.value(chain) if chain is not None else None
             if v is not None:
                 marks[p.id] = v
+                # EOD mark kept with the position so the cockpit shows P&L without live chain calls
+                p.tags["mark"], p.tags["mark_date"] = f"{v:.4f}", asof.isoformat()
+                self.journal.save_position(p, self.mode)
         view = PortfolioView(asof, nav, acct.cash, positions, marks)
         atm_iv = atm_iv_map(features)
 
@@ -255,9 +258,28 @@ class Runner:
             self.selector.name,
             "run",
             {
+                "nav": acct.nav,
+                "cash": acct.cash,
                 "features": {u: f.as_dict() for u, f in features.items()},
+                "spots": {u: c.spot for u, c in chains.items()},
                 "proposals": [asdict(p) for p in report.proposals],
+                "candidates": len(report.candidates),
                 "chosen": [c.package.describe() for c in report.chosen],
+                "opened": [
+                    {"id": p.id, "text": p.package.describe(), "units": p.units}
+                    for p in report.opened
+                ],
+                "closed": [
+                    {
+                        "id": p.id,
+                        "text": p.package.describe(),
+                        "reason": p.status,
+                        "pnl": p.realized_pnl,
+                    }
+                    for p in report.closed
+                ],
+                "tickets": [t.id for t in report.tickets],
+                "notes": list(report.notes),
             },
         )
         self.notifier.send(f"SOTA {self.mode} run {asof}", report.summary())

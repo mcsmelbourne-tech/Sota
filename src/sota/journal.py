@@ -319,5 +319,16 @@ class Journal:
                 (asof.isoformat(), mode, selector, kind, json.dumps(payload, default=str)),
             )
 
+    def list_decisions(self, mode: str, kind: str = "run", limit: int = 60) -> list[dict[str, Any]]:
+        """Most recent first; each row is {asof, selector, **payload}."""
+        rows = self._conn.execute(
+            "SELECT asof, selector, payload FROM decisions WHERE mode = ? AND kind = ? "
+            "ORDER BY asof DESC, id DESC LIMIT ?",
+            (mode, kind, limit),
+        ).fetchall()
+        return [
+            {"asof": r["asof"], "selector": r["selector"], **json.loads(r["payload"])} for r in rows
+        ]
+
     def close(self) -> None:
         self._conn.close()

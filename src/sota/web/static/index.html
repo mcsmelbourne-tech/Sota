@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOTA cockpit</title>
+<style>
+:root{
+  --bg:#0b0e13;--panel:#11151c;--panel-2:#161b24;--line:#1f2631;--line-2:#2a3342;
+  --text:#e6ebf2;--muted:#8a94a6;--dim:#5c6778;
+  --green:#22c55e;--green-bg:rgba(34,197,94,.12);--red:#f0545c;--red-bg:rgba(240,84,92,.12);
+  --amber:#f5b942;--amber-bg:rgba(245,185,66,.14);--blue:#4f8cff;--blue-bg:rgba(79,140,255,.14);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 var(--sans)}
+body{padding:0 20px 40px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.up{color:var(--green)}.down{color:var(--red)}.muted{color:var(--muted)}.dim{color:var(--dim)}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;height:52px;margin:0 -20px 18px;padding:0 20px;
+  background:rgba(11,14,19,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.08em;font-size:14px}
+.brand .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--blue),#8b5cf6);display:grid;place-items:center;font-size:11px;color:#fff}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line-2);background:var(--panel-2);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.badge b{color:var(--text);font-weight:600}
+.badge.live{border-color:rgba(34,197,94,.35);color:var(--green)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.badge.open .dot{background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.badge.closed .dot{background:var(--red)}
+.spacer{flex:1}
+.chips{display:flex;gap:6px}.chip{padding:2px 8px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);font-family:var(--mono);font-size:11px}
+.refresh{color:var(--dim);font-size:11px}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:84px}
+.kpi .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:22px;font-weight:600;margin-top:6px;letter-spacing:-.01em}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* grid + panels */
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);gap:12px;margin-bottom:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel>header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.panel>header h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.panel>header .right{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:11px;color:var(--dim)}
+.panel .body{padding:12px 14px}
+.empty{padding:28px 14px;text-align:center;color:var(--dim)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden}
+.seg button{background:transparent;border:0;color:var(--muted);padding:3px 10px;font-size:11px;cursor:pointer}
+.seg button.on{background:var(--panel-2);color:var(--text)}
+
+/* chart */
+.chart{position:relative;height:300px}
+.chart svg{width:100%;height:100%;display:block}
+.chart .tip{position:absolute;pointer-events:none;background:#0b0e13ee;border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;font-size:11px;display:none;white-space:nowrap}
+
+/* tables */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:rgba(255,255,255,.02)}
+th.r,td.r{text-align:right}
+.tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:600;letter-spacing:.03em}
+.tag.credit{background:var(--amber-bg);color:var(--amber)}.tag.debit{background:var(--blue-bg);color:var(--blue)}
+.tag.stop{background:var(--red-bg);color:var(--red)}.tag.force_close{background:var(--blue-bg);color:var(--blue)}
+.tag.expired{background:var(--panel-2);color:var(--muted)}.tag.selector_close{background:var(--amber-bg);color:var(--amber)}
+.legs{color:var(--muted);font-family:var(--mono);font-size:11px;margin-top:2px;white-space:normal;max-width:420px}
+.scroll{overflow-x:auto}
+.bar{height:4px;border-radius:2px;background:var(--line-2);position:relative;margin-top:5px;width:120px}
+.bar i{position:absolute;top:0;bottom:0;border-radius:2px}
+
+/* scorecard */
+.score{list-style:none;margin:0;padding:0}
+.score li{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.score li:last-child{border-bottom:0}
+.score .k{font-weight:600}.score .t{color:var(--dim);font-size:11px}
+.score .val{font-size:15px;font-weight:600;text-align:right}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.pill.pass{background:var(--green-bg);color:var(--green)}.pill.fail{background:var(--red-bg);color:var(--red)}
+.pill.warn{background:var(--amber-bg);color:var(--amber)}.pill.pending{background:var(--panel-2);color:var(--muted)}
+.pill.prov{opacity:.75}
+.verdict{padding:10px 14px;background:var(--panel-2);font-size:12px;color:var(--muted)}
+.verdict b{color:var(--text)}
+.progress{height:4px;background:var(--line-2)}.progress i{display:block;height:100%;background:var(--blue)}
+
+/* feed */
+.feed{list-style:none;margin:0;padding:0;max-height:360px;overflow:auto}
+.feed li{padding:9px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:86px 1fr;gap:10px}
+.feed .d{color:var(--muted);font-family:var(--mono);font-size:11px;padding-top:2px}
+.feed .line{color:var(--muted)}.feed .line b{color:var(--text);font-weight:600}
+.feed .ev{margin-top:3px;font-family:var(--mono);font-size:11px}
+.feed .note{color:var(--amber);margin-top:3px}
+
+/* tickets */
+.ticket{border:1px solid var(--line-2);border-radius:8px;margin:10px 14px;overflow:hidden}
+.ticket pre{margin:0;padding:10px 12px;background:var(--panel-2);font-family:var(--mono);font-size:11px;white-space:pre-wrap}
+.ticket .act{display:flex;gap:8px;align-items:center;padding:8px 12px}
+input{background:var(--bg);border:1px solid var(--line-2);color:var(--text);border-radius:6px;padding:5px 8px;width:7rem;font:inherit}
+button.btn{background:var(--blue);border:0;color:#fff;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer;font-weight:600}
+button.btn.ghost{background:transparent;border:1px solid var(--line-2);color:var(--muted)}
+
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}}
+@media (max-width:1400px){.grid-2{grid-template-columns:1fr !important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="mark">Σ</span>SOTA</div>
+  <span class="badge" id="b-mode"><b>—</b></span>
+  <span class="badge" id="b-selector">selector <b>—</b></span>
+  <div class="chips" id="universe"></div>
+  <div class="spacer"></div>
+  <span class="badge" id="b-market"><span class="dot"></span><span id="mkt-text">market —</span></span>
+  <span class="badge" id="b-next">next decision <b id="next-text">—</b></span>
+  <span class="refresh" id="refresh">—</span>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="l">Net asset value</div><div class="v num" id="k-nav">—</div><div class="s num" id="k-nav-s">—</div></div>
+  <div class="kpi"><div class="l">Total return</div><div class="v num" id="k-tr">—</div><div class="s num" id="k-tr-s">—</div></div>
+  <div class="kpi"><div class="l">Max drawdown</div><div class="v num" id="k-mdd">—</div><div class="s num" id="k-mdd-s">limit 15%</div></div>
+  <div class="kpi"><div class="l">Unrealized P&amp;L</div><div class="v num" id="k-unreal">—</div><div class="s num" id="k-unreal-s">—</div></div>
+  <div class="kpi"><div class="l">Realized P&amp;L</div><div class="v num" id="k-real">—</div><div class="s num" id="k-real-s">—</div></div>
+  <div class="kpi"><div class="l">Open risk</div><div class="v num" id="k-risk">—</div><div class="s num" id="k-risk-s">—</div></div>
+</div>
+
+<div class="grid">
+  <section class="panel">
+    <header><h2>Equity curve</h2>
+      <div class="right"><div class="seg"><button class="on" data-view="nav">NAV</button><button data-view="dd">Drawdown</button></div></div>
+    </header>
+    <div class="chart" id="chart"><svg></svg><div class="tip" id="tip"></div></div>
+  </section>
+  <section class="panel">
+    <header><h2>Forward test</h2><div class="right" id="score-head">—</div></header>
+    <div class="progress"><i id="score-prog" style="width:0"></i></div>
+    <ul class="score" id="score"></ul>
+    <div class="verdict" id="verdict">—</div>
+  </section>
+</div>
+
+<section class="panel" id="tickets-panel" style="display:none;margin-bottom:12px">
+  <header><h2>Pending tickets</h2><div class="right">enter in your broker, then confirm the fill</div></header>
+  <div id="tickets"></div>
+</section>
+
+<section class="panel" style="margin-bottom:12px">
+  <header><h2>Open positions</h2><div class="right" id="pos-head">—</div></header>
+  <div id="positions" class="scroll"></div>
+</section>
+
+<div class="grid grid-2" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+  <section class="panel">
+    <header><h2>Closed trades</h2><div class="right" id="closed-head">—</div></header>
+    <div id="closed" class="scroll" style="max-height:420px;overflow-y:auto"></div>
+  </section>
+  <section class="panel">
+    <header><h2>Activity</h2><div class="right">one entry per decision cycle</div></header>
+    <ul class="feed" id="feed"></ul>
+  </section>
+</div>
+
+<section class="panel">
+  <header><h2>Market state</h2><div class="right" id="mkt-head">the 10 option-implied features from the last run</div></header>
+  <div id="market" class="scroll"></div>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt={
+  usd:(v,d=0)=>v==null?'—':(v<0?'-':'')+'$'+Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}),
+  susd:(v,d=0)=>v==null?'—':(v>=0?'+':'-')+'$'+Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}),
+  pct:(v,d=1)=>v==null?'—':(v*100).toFixed(d)+'%',
+  spct:(v,d=1)=>v==null?'—':(v>=0?'+':'')+(v*100).toFixed(d)+'%',
+  n:(v,d=2)=>v==null||Number.isNaN(v)?'—':Number(v).toFixed(d),
+  sn:(v,d=2)=>v==null||Number.isNaN(v)?'—':(v>=0?'+':'')+Number(v).toFixed(d),
+  date:s=>s?new Date(s+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'—',
+};
+const sign=v=>v==null?'':v>0?'up':v<0?'down':'';
+let view='nav', summary=null;
+
+async function j(url){const r=await fetch(url);if(!r.ok)throw new Error(url+' '+r.status);return r.json();}
+
+/* ---------------- header + kpis ---------------- */
+function renderHeader(s){
+  $('b-mode').innerHTML=`<b>${s.mode}</b>`; $('b-mode').className='badge'+(s.mode==='live'?' live':'');
+  $('b-selector').innerHTML=`selector <b>${s.selector}</b>`;
+  $('universe').innerHTML=s.universe.map(u=>`<span class="chip">${u}</span>`).join('');
+  const m=s.market; $('b-market').className='badge '+(m.is_open?'open':'closed');
+  $('mkt-text').textContent=(m.is_open?'market open':'market closed')+' · '+m.et_time+' ET';
+  const secs=m.seconds_to_decision; const h=Math.floor(secs/3600), mi=Math.floor(secs%3600/60);
+  $('next-text').textContent=(secs<86400?`${h}h ${String(mi).padStart(2,'0')}m`:fmt.date(m.next_decision.slice(0,10)))+' · 15:50 ET';
+}
+function renderKpis(s){
+  const set=(id,v,cls)=>{const e=$(id);e.textContent=v;e.className='v num '+(cls||'');};
+  set('k-nav',fmt.usd(s.nav));
+  $('k-nav-s').innerHTML=s.day_change==null?`start ${fmt.usd(s.start_nav)}`:`<span class="${sign(s.day_change)}">${fmt.susd(s.day_change)}</span> today · start ${fmt.usd(s.start_nav)}`;
+  set('k-tr',fmt.spct(s.total_return),sign(s.total_return));
+  $('k-tr-s').textContent=s.nav!=null?`${fmt.susd(s.nav-s.start_nav)} since ${fmt.date(s.scorecard.start)}`:'no runs yet';
+  set('k-mdd',s.max_drawdown==null?'—':fmt.pct(s.max_drawdown),s.max_drawdown>=0.15?'down':s.max_drawdown>=0.10?'':'');
+  set('k-unreal',fmt.susd(s.unrealized),sign(s.unrealized));
+  $('k-unreal-s').textContent=`${s.open_count} open position${s.open_count===1?'':'s'}`;
+  set('k-real',fmt.susd(s.realized),sign(s.realized));
+  $('k-real-s').textContent=s.closed_count?`${s.closed_count} closed · win rate ${fmt.pct(s.win_rate,0)} · fees ${fmt.usd(s.fees,0)}`:'no closed trades';
+  set('k-risk',fmt.usd(s.open_max_loss));
+  $('k-risk-s').textContent=s.nav?`max loss of open book · ${fmt.pct(s.open_max_loss/s.nav)} of NAV`:'—';
+}
+
+/* ---------------- equity chart (inline svg) ---------------- */
+function renderChart(series){
+  const svg=document.querySelector('#chart svg'), tip=$('tip');
+  const W=svg.clientWidth||800, H=svg.clientHeight||300, P={l:56,r:16,t:16,b:28};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  if(!series.length){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#5c6778" font-size="12">waiting for the first decision cycle</text>`;return;}
+  const start=series[0].nav; let peak=-Infinity;
+  const pts=series.map(p=>{peak=Math.max(peak,p.nav);return {d:p.date,nav:p.nav,dd:p.nav/peak-1};});
+  const ys=view==='nav'?pts.map(p=>p.nav):pts.map(p=>p.dd);
+  let lo=Math.min(...ys,view==='nav'?start:-0.0), hi=Math.max(...ys,view==='nav'?start:0);
+  if(hi===lo){hi+=1;lo-=1;} const pad=(hi-lo)*0.08; lo-=pad; hi+=pad;
+  const x=i=>P.l+(pts.length===1?0.5:i/(pts.length-1))*(W-P.l-P.r);
+  const y=v=>P.t+(1-(v-lo)/(hi-lo))*(H-P.t-P.b);
+  const line=ys.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const base=view==='nav'?y(start):y(0);
+  const area=`${line} L${x(ys.length-1).toFixed(1)},${base.toFixed(1)} L${x(0).toFixed(1)},${base.toFixed(1)} Z`;
+  const last=ys[ys.length-1];
+  const col=view==='dd'?'#f0545c':(last>=start?'#22c55e':'#f0545c');
+  const ticks=5, g=[];
+  for(let k=0;k<=ticks;k++){const v=lo+(hi-lo)*k/ticks;g.push(`<line x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#1f2631"/><text x="${P.l-8}" y="${y(v)+4}" text-anchor="end" fill="#5c6778" font-size="10">${view==='nav'?'$'+Math.round(v).toLocaleString():(v*100).toFixed(1)+'%'}</text>`);}
+  const xt=[]; const step=Math.max(1,Math.floor(pts.length/6));
+  for(let i=0;i<pts.length;i+=step){xt.push(`<text x="${x(i)}" y="${H-8}" text-anchor="middle" fill="#5c6778" font-size="10">${fmt.date(pts[i].d)}</text>`);}
+  svg.innerHTML=`<defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".28"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    ${g.join('')}${xt.join('')}
+    <line x1="${P.l}" x2="${W-P.r}" y1="${base}" y2="${base}" stroke="#2a3342" stroke-dasharray="3 4"/>
+    <path d="${area}" fill="url(#g)"/><path d="${line}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="${x(ys.length-1)}" cy="${y(last)}" r="3.5" fill="${col}"/>
+    <line id="cross" y1="${P.t}" y2="${H-P.b}" stroke="#2a3342" style="display:none"/><circle id="dot" r="4" fill="#fff" style="display:none"/>`;
+  const cross=svg.querySelector('#cross'), dot=svg.querySelector('#dot');
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect();const px=(e.clientX-r.left)*W/r.width;
+    let i=Math.round((px-P.l)/(W-P.l-P.r)*(pts.length-1)); i=Math.max(0,Math.min(pts.length-1,i));
+    cross.setAttribute('x1',x(i));cross.setAttribute('x2',x(i));cross.style.display='';dot.setAttribute('cx',x(i));dot.setAttribute('cy',y(ys[i]));dot.style.display='';
+    tip.style.display='block';tip.style.left=Math.min(x(i)+12,W-170)*r.width/W+'px';tip.style.top=(y(ys[i])-10)*r.height/H+'px';
+    tip.innerHTML=`<div class="muted">${pts[i].d}</div><div><b>${fmt.usd(pts[i].nav)}</b> <span class="${sign(pts[i].nav-start)}">${fmt.spct(pts[i].nav/start-1)}</span></div><div class="muted">drawdown ${fmt.pct(-pts[i].dd)}</div>`;};
+  svg.onmouseleave=()=>{cross.style.display='none';dot.style.display='none';tip.style.display='none';};
+}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');view=b.dataset.view;if(summary)renderChart(summary.nav_series);});
+
+/* ---------------- scorecard ---------------- */
+function renderScore(sc){
+  if(!sc.start){$('score-head').textContent='not started';$('score').innerHTML=`<li class="empty">first run writes the start NAV</li>`;$('verdict').textContent=sc.verdict;return;}
+  $('score-head').textContent=`day ${sc.days_elapsed} · checkpoints ${fmt.date(sc.checkpoint_6m)} / ${fmt.date(sc.checkpoint_12m)}`;
+  $('score-prog').style.width=Math.min(100,sc.days_elapsed/365*100)+'%';
+  $('score').innerHTML=sc.criteria.map(c=>`<li>
+      <div><div class="k">${c.label}</div><div class="t">target ${c.target} · ${c.detail}</div></div>
+      <div><div class="val num">${c.value}</div><div style="text-align:right;margin-top:3px"><span class="pill ${c.status}${sc.provisional?' prov':''}">${c.status}</span></div></div></li>`).join('');
+  $('verdict').innerHTML=`<b>${sc.verdict}</b>${sc.provisional?' · statuses are indicative until the 6-month checkpoint':''}`;
+}
+
+/* ---------------- positions ---------------- */
+function stopBar(p){ // where the mark sits between entry and the stop (and beyond)
+  if(p.mark==null)return'';
+  const span=Math.abs(p.stop_loss_per_share)||1; const loss=p.entry_premium-p.mark; // >0 means losing
+  const frac=Math.max(0,Math.min(1,loss/span)); const col=frac>0.75?'var(--red)':frac>0.5?'var(--amber)':'var(--green)';
+  return `<div class="bar" title="${(frac*100).toFixed(0)}% of the way to the stop"><i style="left:0;width:${frac*100}%;background:${col}"></i></div>`;
+}
+function posRow(p,closed){
+  const pnlCls=sign(p.pnl);
+  return `<tr>
+    <td><b>${p.package.underlying}</b><div class="legs">${p.id}</div></td>
+    <td>${p.label} <span class="tag ${p.is_credit?'credit':'debit'}">${p.is_credit?'credit':'debit'}</span><div class="legs">${p.legs.join(' · ')}</div></td>
+    <td class="r num">${p.units}</td>
+    <td class="r num">${fmt.sn(p.entry_premium)}</td>
+    <td class="r num">${closed?fmt.sn(p.exit_premium):(p.mark==null?'<span class="dim">—</span>':fmt.sn(p.mark))}${!closed&&p.mark_date?`<div class="legs">${fmt.date(p.mark_date)}</div>`:''}</td>
+    <td class="r num ${pnlCls}"><b>${fmt.susd(p.pnl)}</b><div class="legs ${pnlCls}">${fmt.spct(p.pnl_pct)}</div></td>
+    ${closed?`<td><span class="tag ${p.status}">${p.status.replace('_',' ')}</span></td><td class="num muted">${fmt.date(p.entry_date)} → ${fmt.date(p.exit_date)}<div class="legs">${p.held_days}d held</div></td>`
+            :`<td class="num">${fmt.sn(p.stop_level)}${stopBar(p)}</td><td class="r num">${p.dte}d<div class="legs">exit by ${fmt.date(p.force_close_date)}</div></td><td class="muted" style="white-space:normal;max-width:360px">${p.rationale||''}</td>`}
+  </tr>`;
+}
+function renderPositions(open,closed){
+  $('pos-head').textContent=open.length?`${open.length} open · marks as of last run`:'';
+  $('positions').innerHTML=open.length?`<table><thead><tr><th>Underlying</th><th>Structure</th><th class="r">Units</th><th class="r">Entry</th><th class="r">Mark</th><th class="r">P&amp;L</th><th>Stop</th><th class="r">DTE</th><th>Rationale</th></tr></thead><tbody>${open.map(p=>posRow(p,false)).join('')}</tbody></table>`
+    :`<div class="empty">No open positions — the next decision runs at 15:50 ET.</div>`;
+  $('closed-head').textContent=closed.length?`${closed.length} trades`:'';
+  $('closed').innerHTML=closed.length?`<table><thead><tr><th>Underlying</th><th>Structure</th><th class="r">Units</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">P&amp;L</th><th>Reason</th><th>Held</th></tr></thead><tbody>${closed.map(p=>posRow(p,true)).join('')}</tbody></table>`
+    :`<div class="empty">No closed trades yet.</div>`;
+}
+
+/* ---------------- activity ---------------- */
+function renderFeed(runs){
+  if(!runs.length){$('feed').innerHTML=`<li class="empty">No decision cycles recorded.</li>`;return;}
+  $('feed').innerHTML=runs.map(r=>{
+    const ev=[...(r.opened||[]).map(o=>`<div class="ev up">+ opened ${o.text} ×${o.units}</div>`),
+              ...(r.closed||[]).map(c=>`<div class="ev ${sign(c.pnl)}">− closed ${c.text} · ${c.reason} · ${fmt.susd(c.pnl)}</div>`),
+              ...(r.notes||[]).map(n=>`<div class="note">${n}</div>`)].join('');
+    return `<li><div class="d">${r.asof}</div><div><div class="line"><b>${fmt.usd(r.nav)}</b> · ${(r.proposals||[]).length} proposals → ${r.candidates??'?'} priced → ${(r.chosen||[]).length} chosen</div>${ev}</div></li>`;}).join('');
+}
+
+/* ---------------- market state ---------------- */
+const FEATS=[['spot','spot',v=>fmt.n(v,2)],['ret','ret',v=>fmt.spct(v,2)],['rv','rv',v=>fmt.pct(v,1)],['iv','iv',v=>fmt.pct(v,1)],['iv_rv','iv/rv',v=>fmt.n(v,2)],['wedge','wedge',v=>fmt.sn(v,3)],['ts','term',v=>fmt.sn(v,3)],['sk','skew',v=>fmt.sn(v,3)],['bf','fly',v=>fmt.sn(v,3)],['doi','Δoi',v=>fmt.sn(v,3)]];
+function renderMarket(m){
+  const us=Object.keys(m.features||{});
+  if(!us.length){$('market').innerHTML=`<div class="empty">Features appear after the first run.</div>`;return;}
+  $('mkt-head').textContent=`as of ${m.asof}`;
+  $('market').innerHTML=`<table><thead><tr><th>Underlying</th>${FEATS.map(f=>`<th class="r">${f[1]}</th>`).join('')}</tr></thead><tbody>${us.map(u=>{
+    const f=m.features[u]; const row={...f, spot:(m.spots||{})[u]??f.spot, iv_rv:(f.iv&&f.rv)?f.iv/f.rv:null};
+    return `<tr><td><b>${u}</b></td>${FEATS.map(([k,,fn])=>`<td class="r num ${k==='ret'?sign(row[k]):''}">${fn(row[k])}</td>`).join('')}</tr>`;}).join('')}</tbody></table>`;
+}
+
+/* ---------------- tickets (live mode) ---------------- */
+function renderTickets(t){
+  $('tickets-panel').style.display=t.length?'':'none';
+  $('tickets').innerHTML=t.map(x=>`<div class="ticket"><pre>${x.text}</pre><div class="act">
+    <span class="muted">fill price</span><input id="p-${x.id}" type="number" step="0.01"><span class="muted">units</span><input id="u-${x.id}" type="number" value="${x.units}">
+    <button class="btn" onclick="confirmT('${x.id}')">Confirm fill</button><button class="btn ghost" onclick="skipT('${x.id}')">Skip</button></div></div>`).join('');
+}
+async function confirmT(id){const price=parseFloat($('p-'+id).value);const units=parseInt($('u-'+id).value);
+  const r=await fetch(`/api/tickets/${id}/confirm`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({price,units})});
+  if(!r.ok){alert((await r.json()).detail)} load();}
+async function skipT(id){await fetch(`/api/tickets/${id}/skip`,{method:'POST'});load();}
+
+/* ---------------- main ---------------- */
+async function load(){
+  try{
+    const [s,open,closed,runs,mkt,tk]=await Promise.all([j('/api/summary'),j('/api/positions?status=open'),j('/api/positions?status=closed'),j('/api/runs?limit=30'),j('/api/market'),j('/api/tickets')]);
+    summary=s; renderHeader(s); renderKpis(s); renderChart(s.nav_series); renderScore(s.scorecard); renderPositions(open,closed); renderFeed(runs); renderMarket(mkt); renderTickets(tk);
+    $('refresh').textContent='updated '+new Date().toLocaleTimeString();
+  }catch(e){$('refresh').textContent='error: '+e.message;}
+}
+load(); setInterval(load,60000); window.addEventListener('resize',()=>summary&&renderChart(summary.nav_series));
+</script>
+</body>
+</html>

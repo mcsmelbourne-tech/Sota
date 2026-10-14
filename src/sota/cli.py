@@ -26,8 +26,12 @@ live_app = typer.Typer(
 paper_app = typer.Typer(
     help="Paper mode: auto-trade the Alpaca paper account.", no_args_is_help=True
 )
+notify_app = typer.Typer(
+    help="Notification channels: test delivery, find ids.", no_args_is_help=True
+)
 app.add_typer(live_app, name="live")
 app.add_typer(paper_app, name="paper")
+app.add_typer(notify_app, name="notify")
 console = Console()
 
 DateOpt = Annotated[str | None, typer.Option("--date", help="YYYY-MM-DD (default today)")]
@@ -429,6 +433,82 @@ def positions(mode: str | None = None) -> None:
             str(p.force_close_date),
         )
     console.print(table)
+
+
+@app.command()
+def scorecard(mode: str | None = None) -> None:
+    """Forward-test scorecard against the pre-registered criteria (see README)."""
+    from sota.scorecard import RULES, build_scorecard
+
+    s = _settings()
+    m = mode or s.mode.value
+    journal = Journal(s.journal_path)
+    card = build_scorecard(journal.nav_series(m), journal.list_positions(m, None))
+    colours = {"pass": "green", "warn": "yellow", "fail": "red", "pending": "dim"}
+    if card.start is None:
+        console.print(f"[dim]{card.verdict}[/dim]")
+        return
+    table = Table(
+        title=f"Forward test ({m}) since {card.start}: day {card.days_elapsed}, "
+        f"NAV ${card.nav:,.0f} from ${card.start_nav:,.0f}"
+    )
+    for col in ("criterion", "value", "target", "status", "detail"):
+        table.add_column(col)
+    for c in card.criteria:
+        table.add_row(
+            c.label,
+            c.value,
+            c.target,
+            f"[{colours[c.status]}]{c.status}[/{colours[c.status]}]",
+            c.detail,
+        )
+    console.print(table)
+    console.print(
+        f"checkpoints {card.checkpoint_6m} / {card.checkpoint_12m}  ->  [bold]{card.verdict}[/bold]"
+    )
+    console.print("\n".join(f"[dim]{r}[/dim]" for r in RULES))
+
+
+# --------------------------------------------------------------------------- notify
+@notify_app.command("test")
+def notify_test() -> None:
+    """Send a test message through every configured channel and report each one's outcome."""
+    from sota.notify.channels import build_notifier
+
+    s = _settings()
+    multi = build_notifier(s.notify, include_log=False)
+    body = f"mode={s.mode.value} selector={s.selector} universe={','.join(s.universe)}"
+    ok = True
+    for ch in multi.channels:  # type: ignore[attr-defined]
+        try:
+            ch.send("SOTA test notification", body)
+            console.print(f"[green]{ch.name}: delivered[/green]")
+        except Exception as exc:  # noqa: BLE001 - report every channel, then exit non-zero
+            ok = False
+            console.print(f"[red]{ch.name}: {exc}[/red]")
+    if not ok:
+        raise typer.Exit(code=1)
+
+
+@notify_app.command("chat-id")
+def notify_chat_id() -> None:
+    """Print the Telegram chat ids that have messaged the bot (send it any message first)."""
+    from sota.notify.channels import telegram_chat_ids
+
+    s = _settings()
+    if not s.notify.telegram_bot_token:
+        raise typer.BadParameter("set SOTA_NOTIFY__TELEGRAM_BOT_TOKEN first (from @BotFather)")
+    chats = telegram_chat_ids(s.notify.telegram_bot_token.get_secret_value())
+    if not chats:
+        console.print(
+            "[yellow]no messages yet: open the bot in Telegram, press Start, send 'hi', rerun[/yellow]"
+        )
+        return
+    for chat_id, name in chats:
+        console.print(f"{chat_id}  {name}")
+    console.print(
+        "[dim]put the id in SOTA_NOTIFY__TELEGRAM_CHAT_ID, then: uv run sota notify test[/dim]"
+    )
 
 
 # --------------------------------------------------------------------------- paper

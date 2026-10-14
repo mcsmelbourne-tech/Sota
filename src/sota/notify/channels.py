@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import smtplib
 import subprocess
 from email.message import EmailMessage
@@ -21,11 +22,29 @@ class TelegramNotifier:
         self.client = client or httpx.Client(timeout=15)
 
     def send(self, title: str, body: str) -> None:
-        text = f"*{title}*\n```\n{body}\n```"
+        # HTML mode: unlike Markdown, underscores and asterisks in tickers/ids never break a message.
+        text = f"<b>{html.escape(title)}</b>\n<pre>{html.escape(body[:3800])}</pre>"
         r = self.client.post(
-            self.url, json={"chat_id": self.chat_id, "text": text[:4000], "parse_mode": "Markdown"}
+            self.url, json={"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
         )
         r.raise_for_status()
+
+
+def telegram_chat_ids(token: str, client: httpx.Client | None = None) -> list[tuple[str, str]]:
+    """(chat_id, display name) for every chat that has messaged the bot recently."""
+    client = client or httpx.Client(timeout=15)
+    r = client.get(f"https://api.telegram.org/bot{token}/getUpdates")
+    r.raise_for_status()
+    seen: dict[str, str] = {}
+    for upd in r.json().get("result", []):
+        msg = upd.get("message") or upd.get("channel_post") or {}
+        chat = msg.get("chat") or {}
+        if "id" in chat and str(chat["id"]) not in seen:
+            name = chat.get("title") or " ".join(
+                x for x in (chat.get("first_name"), chat.get("last_name")) if x
+            )
+            seen[str(chat["id"])] = name or chat.get("username", "")
+    return sorted(seen.items())
 
 
 class EmailNotifier:

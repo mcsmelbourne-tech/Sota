@@ -43,7 +43,37 @@ uv run sota positions --mode live
 
 Selectors: `threshold` (paper Table 8 rules; `SOTA_THRESHOLD_GATE=false` disables the `ts<0`
 participation gate), `llm` (anonymized state -> JSON candidates via any OpenAI-compatible API),
-`oracle` (hindsight reference, backtest only). Cost presets: `paper` (Table 5), `robinhood`, `ibkr`.
+`oracle` (hindsight reference, backtest only), `replay:<proposals.json>` (re-opens a recorded run's
+trades under the current limits; files come from `sota backtest --out DIR`). Cost presets: `paper`
+(Table 5), `robinhood`, `ibkr`.
+
+## Forward test — pre-registered 2026-10-14
+
+Three historical years gave no consistent edge with the paper's full menu (iron condors lost in two
+of three years and drove the one big winner); replays without condors were modest and positive in
+two of three years (-9.8% / +18.5% / +10.7%, worst drawdown 12.4%). That configuration — `llm`
+selector, families `ol dv cv dg ib bf`, $50k, Robinhood costs, unhedged — is now paper trading on
+Alpaca, one decision per day at 15:50 ET. The following criteria were fixed **before** the first
+run and are evaluated by `sota scorecard` and the cockpit (`src/sota/scorecard.py`):
+
+| # | criterion | threshold |
+|---|---|---|
+| C1 | total return after costs | > 0 at 6 months; > ~4% (cash) at 12 months |
+| C2 | maximum drawdown, daily closes | < 15% at every point |
+| C3 | trade rate (annualized after 60 days) | 20–50 per year |
+| C4 | worst calendar month | better than −8% |
+
+Verdict rule: two or more failures at the 6-month checkpoint end the experiment. All four must pass
+at 12 months before any real-money (advisory-ticket) use, and then only at a fraction of size.
+Changing the configuration restarts the clock.
+
+## Paper schedule
+
+`launchd/com.sota.paper.plist` (installed in `~/Library/LaunchAgents`) runs `scripts/paper_run.sh`
+at 15:45 and 16:45 local; the script keeps whichever firing falls in the 15:50 America/New_York
+window, so US daylight-saving changes never move the decision time. One run per trading day; logs in
+`data/paper/run_<date>.log`. The Mac must be awake at that time (`pmset repeat wakeorpoweron`).
+Pause with `launchctl bootout gui/$(id -u)/com.sota.paper`.
 
 Theta Data transport: `SOTA_THETA__TRANSPORT=library` (default) talks to Theta's servers directly
 through the `thetadata` package using `SOTA_THETA__API_KEY` (or `THETADATA_API_KEY`); `rest` uses a
