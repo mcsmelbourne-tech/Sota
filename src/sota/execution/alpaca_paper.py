@@ -93,11 +93,12 @@ class AlpacaPaperBroker:
         )
         return str(self.client.submit_order(req).id)
 
-    def order_status(self, order_id: str) -> tuple[str, float | None]:
+    def order_status(self, order_id: str) -> tuple[str, float | None, int]:
+        """(status, filled average price as a magnitude, filled quantity)."""
         o = self.client.get_order_by_id(order_id)
         status = o.status.value if hasattr(o.status, "value") else str(o.status)
-        price = float(o.filled_avg_price) if o.filled_avg_price else None
-        return status, price
+        price = abs(float(o.filled_avg_price)) if o.filled_avg_price else None
+        return status, price, int(float(o.filled_qty or 0))
 
     def positions(self) -> list[dict[str, str]]:
         return [

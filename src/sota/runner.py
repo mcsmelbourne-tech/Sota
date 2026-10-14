@@ -90,14 +90,31 @@ class Runner:
     def is_live(self) -> bool:
         return isinstance(self.broker, ManualTicketBroker)
 
+    def _slip(self, half_spread: float) -> float:
+        """Price concession the cost model assumes on every fill (backtest and paper agree)."""
+        return self.costs.half_spread_mult * half_spread
+
     # ------------------------------------------------------------------ exits
-    def _close_paper(self, pos: Position, value: float, reason: str, asof: date) -> None:
-        order_id = self.broker.submit_package(pos.package, pos.units, value, "close")
+    def _close_paper(
+        self, pos: Position, value: float, reason: str, asof: date, chain: Chain | None = None
+    ) -> None:
+        half_spread = pos.package.half_spread
+        if chain is not None:
+            quotes = [chain.quote(leg.contract) for leg in pos.package.legs]
+            if all(q is not None and q.is_valid for q in quotes):
+                half_spread = sum(
+                    abs(leg.ratio) * q.half_spread
+                    for leg, q in zip(pos.package.legs, quotes, strict=True)
+                )
+        # A resting order at the mark does not fill in the last minutes; pay the modelled slippage.
+        limit = value - self._slip(half_spread)
+        order_id = self.broker.submit_package(pos.package, pos.units, limit, "close")
         fee = self.costs.option_fee * pos.package.contracts_per_unit * pos.units
         pos.fees_paid += fee
-        pos.exit_date, pos.exit_premium, pos.status = asof, value, reason
-        pos.realized_pnl = (value - pos.entry_premium) * MULTIPLIER * pos.units - pos.fees_paid
+        pos.exit_date, pos.exit_premium, pos.status = asof, limit, reason
+        pos.realized_pnl = (limit - pos.entry_premium) * MULTIPLIER * pos.units - pos.fees_paid
         pos.tags["close_order_id"] = order_id
+        pos.tags["close_fill"] = "assumed"
         self.journal.save_position(pos, self.mode)
 
     def manage_exits(
@@ -136,7 +153,7 @@ class Runner:
                 if not broker.pending_close_exists(pos.id):
                     report.tickets.append(broker.issue_close(pos, v, reason))
             else:
-                self._close_paper(pos, v, reason, asof)
+                self._close_paper(pos, v, reason, asof, chain)
                 report.closed.append(pos)
 
     # ------------------------------------------------------------------ entries
@@ -147,20 +164,21 @@ class Runner:
                 broker: ManualTicketBroker = self.broker  # type: ignore[assignment]
                 report.tickets.append(broker.issue_open(cand, self.limits))
                 continue
-            order_id = self.broker.submit_package(pkg, cand.units, pkg.net_premium, "open")
+            limit = pkg.net_premium + self._slip(pkg.half_spread)
+            order_id = self.broker.submit_package(pkg, cand.units, limit, "open")
             fee = self.costs.option_fee * pkg.contracts_per_unit * cand.units
             pos = Position(
                 id=uuid.uuid4().hex[:8],
                 package=pkg,
                 units=cand.units,
                 entry_date=asof,
-                entry_premium=pkg.net_premium,
-                stop_loss_per_share=self.limits.stop_loss_frac * abs(pkg.net_premium),
+                entry_premium=limit,
+                stop_loss_per_share=self.limits.stop_loss_frac * abs(limit),
                 force_close_date=pkg.expiry - timedelta(days=self.limits.force_close_dte),
                 fees_paid=fee,
                 tags={
                     "order_id": order_id,
-                    "fill": "assumed_mid",
+                    "fill": "assumed",
                     "rationale": cand.proposal.rationale,
                 },
             )
@@ -286,22 +304,88 @@ class Runner:
         return report
 
     def reconcile(self) -> list[str]:
-        """Paper mode: replace assumed mid fills with actual fills; drop unfilled orders."""
+        """Paper mode: replace assumed fills with the broker's, drop unfilled opens, revive unfilled closes.
+
+        Runs before each decision so the journal never diverges from the account: an entry whose
+        DAY order expired never existed; an exit whose order did not fill is still a live position
+        and goes back to the open book (the next cycle re-evaluates its stop / force-close).
+        """
         notes: list[str] = []
         if self.is_live or not hasattr(self.broker, "order_status"):
             return notes
-        for pos in self.journal.list_positions(self.mode, "open"):
-            if pos.tags.get("fill") != "assumed_mid" or "order_id" not in pos.tags:
-                continue
-            status, price = self.broker.order_status(pos.tags["order_id"])  # type: ignore[attr-defined]
-            if status == "filled":
-                if price is not None:
-                    pos.entry_premium = price if pos.package.net_premium >= 0 else -abs(price)
-                    pos.stop_loss_per_share = self.limits.stop_loss_frac * abs(pos.entry_premium)
-                pos.tags["fill"] = "confirmed"
-                notes.append(f"{pos.id} filled at {pos.entry_premium:.2f}")
-            elif status in {"canceled", "expired", "rejected"}:
-                pos.status = "unfilled"
-                notes.append(f"{pos.id} {status}; removed")
-            self.journal.save_position(pos, self.mode)
+        done = {"filled"}
+        gone = {"canceled", "expired", "rejected", "replaced"}
+        for pos in self.journal.list_positions(self.mode, None):
+            if pos.is_open and pos.tags.get("fill") in {"assumed", "assumed_mid"}:
+                order_id = pos.tags.get("order_id")
+                if not order_id:
+                    continue
+                status, price, qty = self.broker.order_status(order_id)  # type: ignore[attr-defined]
+                if status in done or (qty and status in gone):
+                    if price is not None:
+                        pos.entry_premium = price if pos.package.net_premium >= 0 else -price
+                        pos.stop_loss_per_share = self.limits.stop_loss_frac * abs(
+                            pos.entry_premium
+                        )
+                    if qty and qty < pos.units:
+                        pos.fees_paid *= qty / pos.units
+                        pos.units = qty
+                    pos.tags["fill"] = "confirmed"
+                    notes.append(f"{pos.id} filled x{pos.units} at {pos.entry_premium:+.2f}")
+                elif status in gone:
+                    pos.status = "unfilled"
+                    notes.append(f"{pos.id} {status} unfilled; removed")
+                else:
+                    continue
+                self.journal.save_position(pos, self.mode)
+            elif not pos.is_open and pos.tags.get("close_fill") == "assumed":
+                order_id = pos.tags.get("close_order_id")
+                if not order_id:
+                    continue
+                status, price, qty = self.broker.order_status(order_id)  # type: ignore[attr-defined]
+                if status in done or (qty and status in gone):
+                    if qty and qty < pos.units:
+                        # partial close: the remainder is still held; keep it as its own open position
+                        per_unit_fee = self.costs.option_fee * pos.package.contracts_per_unit
+                        rest = Position(
+                            id=uuid.uuid4().hex[:8],
+                            package=pos.package,
+                            units=pos.units - qty,
+                            entry_date=pos.entry_date,
+                            entry_premium=pos.entry_premium,
+                            stop_loss_per_share=pos.stop_loss_per_share,
+                            force_close_date=pos.force_close_date,
+                            fees_paid=per_unit_fee * (pos.units - qty),
+                            tags={**pos.tags, "fill": "confirmed", "split_from": pos.id},
+                        )
+                        for k in ("close_order_id", "close_fill"):
+                            rest.tags.pop(k, None)
+                        self.journal.save_position(rest, self.mode)
+                        pos.units = qty
+                        pos.fees_paid = 2 * per_unit_fee * qty  # entry + exit for the closed units
+                        notes.append(f"{pos.id} partially closed x{qty}; {rest.id} holds the rest")
+                    if price is not None:
+                        pos.exit_premium = price if (pos.exit_premium or 0) >= 0 else -price
+                    pos.realized_pnl = (
+                        (pos.exit_premium or 0.0) - pos.entry_premium
+                    ) * MULTIPLIER * pos.units - pos.fees_paid
+                    pos.tags["close_fill"] = "confirmed"
+                    notes.append(f"{pos.id} close filled at {pos.exit_premium:+.2f}")
+                elif status in gone:
+                    fee = self.costs.option_fee * pos.package.contracts_per_unit * pos.units
+                    pos.fees_paid = max(pos.fees_paid - fee, 0.0)
+                    pos.tags["close_attempts"] = str(int(pos.tags.get("close_attempts", "0")) + 1)
+                    pos.tags["last_close_reason"] = pos.status
+                    pos.status, pos.exit_date, pos.exit_premium, pos.realized_pnl = (
+                        "open",
+                        None,
+                        None,
+                        None,
+                    )
+                    for k in ("close_order_id", "close_fill"):
+                        pos.tags.pop(k, None)
+                    notes.append(f"{pos.id} close {status} unfilled; position reopened")
+                else:
+                    continue
+                self.journal.save_position(pos, self.mode)
         return notes
