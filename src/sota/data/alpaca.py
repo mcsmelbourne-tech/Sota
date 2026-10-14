@@ -76,13 +76,16 @@ class AlpacaChainSource:
         from alpaca.data.requests import StockBarsRequest
         from alpaca.data.timeframe import TimeFrame
 
-        start = asof - timedelta(days=int(n * 1.6) + 10)
+        # Completed sessions only: the free plan rejects same-day SIP bars, and the caller appends
+        # the live spot as today's close anyway.
+        end = asof - timedelta(days=1)
+        start = end - timedelta(days=int(n * 1.6) + 10)
         bars = self.stocks.get_stock_bars(
             StockBarsRequest(
                 symbol_or_symbols=underlying,
                 timeframe=TimeFrame.Day,
                 start=datetime.combine(start, time.min),
-                end=datetime.combine(asof, time.max),
+                end=datetime.combine(end, time.max),
                 adjustment=Adjustment.SPLIT,
             )
         )

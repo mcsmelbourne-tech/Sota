@@ -433,9 +433,18 @@ def positions(mode: str | None = None) -> None:
 
 # --------------------------------------------------------------------------- paper
 @paper_app.command("run")
-def paper_run(asof: DateOpt = None, reconcile: bool = True) -> None:
+def paper_run(
+    asof: DateOpt = None,
+    reconcile: bool = True,
+    force: bool = typer.Option(False, help="Run even if the market is closed (orders would queue)"),
+) -> None:
     """One decision cycle against the Alpaca paper account (exits, proposals, orders, hedges)."""
     runner = build_runner(_settings("paper"))
+    is_open = getattr(runner.broker, "market_is_open", lambda: True)
+    if not force and not is_open():
+        # a DAY order placed after an early close fills at tomorrow's open, not today's marks
+        console.print("[yellow]market is closed (holiday or early close); skipping[/yellow]")
+        return
     if reconcile:
         for note in runner.reconcile():
             console.print(f"[dim]reconcile:[/dim] {note}")

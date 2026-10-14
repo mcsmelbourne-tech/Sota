@@ -31,6 +31,9 @@ class AlpacaPaperBroker:
         a = self.client.get_account()
         return AccountInfo(float(a.equity), float(a.cash))
 
+    def market_is_open(self) -> bool:
+        return bool(self.client.get_clock().is_open)
+
     def submit_package(self, pkg: Package, units: int, limit_price: float, intent: Intent) -> str:
         from alpaca.trading.enums import OrderClass, OrderSide, PositionIntent, TimeInForce
         from alpaca.trading.requests import LimitOrderRequest, OptionLegRequest
