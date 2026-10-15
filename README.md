@@ -193,10 +193,18 @@ files behind the tables above are in `data/bt/`.
 
 ## Paper schedule
 
-`launchd/com.sota.paper.plist` (installed in `~/Library/LaunchAgents`) runs `scripts/paper_run.sh`
-at 15:45 and 16:45 local; the script keeps whichever firing falls in the 15:50 America/New_York
-window, so US daylight-saving changes never move the decision time. One run per trading day; logs in
-`data/paper/run_<date>.log`. The Mac must be awake at that time (`pmset repeat wakeorpoweron`).
+`launchd/com.sota.paper.plist` runs `scripts/paper_run.sh` at 15:45 and 16:45 local time; the
+script keeps whichever firing falls in the 15:50 America/New_York window, so US daylight-saving
+changes never move the decision time. One run per trading day; logs in `data/paper/run_<date>.log`.
+The Mac must be awake at that time (`pmset repeat wakeorpoweron`).
+
+Install (the plist has `__REPO__` where the repo path goes):
+
+```bash
+sed "s#__REPO__#$PWD#g" launchd/com.sota.paper.plist > ~/Library/LaunchAgents/com.sota.paper.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.sota.paper.plist
+```
+
 Pause with `launchctl bootout gui/$(id -u)/com.sota.paper`.
 
 Theta Data transport: `SOTA_THETA__TRANSPORT=library` (default) talks to Theta's servers directly
