@@ -1,9 +1,99 @@
 # sota
 
-Options strategy cockpit built on *SOTA: Stock Options Trading Agents Guided by Option-Implied
-Return Distributions* (Xie & Liu, 2026). The paper's structure is implemented deterministically —
-10 option-implied features, 9 strategy families, contract/size/hedge resolvers, risk caps, exits,
-and the eight evaluation metrics — with the strategy *selector* as a swappable module.
+A tool that puts the idea from the paper *SOTA: Stock Options Trading Agents Guided by
+Option-Implied Return Distributions* into practice, and a test of that idea on three years of real
+option prices.
+
+The short version: we could not make it work for a retail account. The framework runs as the paper
+describes it, and over the paper's own six-month period our numbers look similar to theirs. But over
+three years, with a $50,000 account, no hedging and retail costs, the strategy lost money in one
+year out of three, and lost a lot. Possible reasons, which we cannot separate with the data we have:
+
+- We used a general LLM (Grok) as the selector. The paper trains its own model. We did not run their
+  model, so maybe their model does better than ours.
+- The paper tests six months. We tested three years. The six months in the paper were a calm period
+  for this kind of strategy, and the bad year in our test is a trending year with big moves.
+- The paper uses $1,000,000 and hedges with shares. A retail account cannot do that. Without the
+  hedge, the strategy depends on the direction of the stock, and that is where our losses came from.
+- The paper uses ten stocks. We used three (SPY, NVDA, TSLA), because the other seven have wide
+  bid-ask spreads that eat the profit at retail size.
+
+The details are in "Results" below.
+
+## The paper
+
+**SOTA: Stock Options Trading Agents Guided by Option-Implied Return Distributions**
+Yizhen Xie (Carnegie Mellon University) and Mengyang Liu (Amazon), 2026.
+Accepted at the NeurIPS 2026 Agenthon Workshop. License CC BY 4.0.
+
+- Abstract and PDF: https://arxiv.org/abs/2610.10407
+- HTML version: https://arxiv.org/html/2610.10407v1
+
+### The paper in simple words
+
+**The problem.** One stock can have thousands of option contracts: many strikes, many expiry
+dates, calls and puts. A trading program that has to pick contracts one by one has too many
+choices. Most older programs avoid this by always trading one fixed structure, for example always a
+straddle. Then they cannot change strategy when the market changes.
+
+**The idea.** Do not let the model pick contracts. Let it pick a *strategy* from a short list, and
+let simple fixed rules (the paper calls them "resolvers") turn that choice into real contracts, a
+position size, and a hedge. The model makes the big decision. The rules do the rest.
+
+**What the model sees.** For each stock, 10 numbers that come from the option prices, not from
+the news. In plain words: how the stock moved today, how much it has been moving (realized
+volatility), how much the market expects it to move (implied volatility) and how that changed
+today, the gap between the two, whether long-dated options are more or less expensive than
+short-dated ones, whether puts are more expensive than calls (skew), how curved the smile is, which
+way option buyers are pushing (flow), and how open interest changed. Plus the open positions and the
+account state. The model never sees the stock name, the price level, or the date; the authors hide
+these so the model cannot remember what happened on that day.
+
+**What the model picks.** One line per decision: the stock, one of nine strategy families, long or
+short, a time bucket (0–7, 8–30, 31–90 or 91–180 days to expiry), and a point on a delta grid that
+says how far from the current price. The nine families, in four groups:
+
+| group | family | what it bets on |
+|---|---|---|
+| direction | outright call or put; debit vertical; credit vertical; defined-risk reversal | the stock goes up (or down) |
+| volatility | long straddle; long strangle | the stock moves a lot, either way |
+| volatility | iron butterfly; iron condor | the stock stays in a range |
+| curvature | butterfly | the stock lands near one price |
+
+It can open, close, roll, or do nothing. It first proposes up to six candidates per stock; the tool
+prices only those; then it makes the final choice. This way the model never has to read the full
+option chain.
+
+**The fixed rules.** The contract resolver picks the expiry closest to the time bucket and the
+strike closest to the asked delta. The size resolver gives every position the same amount of risk
+(in the paper, 0.5% of the account for a one-day shock in price, volatility and time). The hedge
+resolver buys or sells shares against the volatility positions, so they do not depend on the
+direction of the stock. Hard limits: at most 12 open positions, 3 per stock, a stop loss at 60% of
+the premium, close everything one day before expiry, and stop trading if the account falls to 20%
+of where it started.
+
+**How they trained it.** They started with a 27B open model (Qwen3.8). First, they had a stronger
+model trade in the environment, kept its best runs, and taught the smaller model to copy them.
+Then they let the smaller model trade on its own and rewarded it for portfolio returns after costs
+(reinforcement learning). Training data is Sep 2024 to Feb 2025.
+
+**What they report.** On 10 names (SPY plus nine big US stocks), $1,000,000 account, with hedging,
+from March to August 2025: **+18.3% total return, Sharpe 1.60, maximum drawdown 9.0%.** All the
+rule-based and machine-learning baselines lost money in the same period. A "hindsight oracle" that
+sees the future shows how much was possible. One more finding: giving the model news during the
+second training step made the result worse (+18.3% became −2.7%).
+
+**What this repo does with it.** We built the whole framework again (features, families,
+resolvers, limits, exits, metrics) from the description in the paper. We put a general LLM (Grok)
+in the place of their trained model as the selector. Then we tested it over three years instead of
+six months, with a retail account size. We also connected it to a paper-trading account and a web
+page, so it can run every day by itself. The result of the test is below, after the setup notes.
+
+## What is in this repo
+
+The structure of the paper is implemented as fixed code: the 10 option-implied features, the 9
+strategy families, the contract/size/hedge resolvers, the risk limits, the exits, and the eight
+metrics. The strategy *selector* is a separate piece that you can change.
 
 Three modes:
 
