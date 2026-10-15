@@ -1,0 +1,991 @@
+[
+ {
+  "entry_date": "2024-09-03",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "IV 16vol under RV after a -10% session; buy capped upside so cheap realized vol can pay, not a pin or short-vol structure."
+ },
+ {
+  "entry_date": "2024-09-04",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "IV is ~20% below realized and still falling; positive skew makes calls the cheaper long-vol side. Use 31-90 so it does not stack on the existing losing 8-30 call."
+ },
+ {
+  "entry_date": "2024-09-11",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 1,
+  "rationale": "IV is 15.6 vol pts under realized (iv/rv 0.77) and the front is cheap vs the upward-sloping term structure, so owning a put is the long-vol expression that does not add bullish delta on top of two already-large winning long calls after a +7.8% session. Defined premium risk; no add on asset_2 or asset_3, where the vol wedge is too small to clear the spread."
+ },
+ {
+  "entry_date": "2024-09-16",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.2
+  },
+  "units": 7,
+  "rationale": "IV rich vs low RV, IV rising, spot quiet and term in contango: defined-risk short vol in the front bucket where theta is highest; wing keeps gap risk bounded and edge should clear the spread."
+ },
+ {
+  "entry_date": "2024-09-16",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "wing": 0.25
+  },
+  "units": 3,
+  "rationale": "Same rich iv/rv and calm realized path, but a second tenor so the short-vol bet is not only front-week gamma; wider wing for the longer hold."
+ },
+ {
+  "entry_date": "2024-09-17",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 3,
+  "rationale": "IV rich vs RV (wedge +0.13, iv/rv 1.24) and term structure in backwardation, so front premium is the short-vol expression; defined-risk IB, no open book conflict."
+ },
+ {
+  "entry_date": "2024-09-18",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Front IV far above RV with steep backwardation and very rich put skew; defined put-credit harvests that premium. No add on asset_1: IV not rich vs RV, book already mixed, edge does not clear the spread."
+ },
+ {
+  "entry_date": "2024-09-24",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.3
+  },
+  "units": 2,
+  "rationale": "Front IV is rich versus realized and the curve is in backwardation; a wider-wing iron butterfly sells that near-dated premium with defined risk."
+ },
+ {
+  "entry_date": "2024-10-03",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV 41% rich vs RV and put skew extreme (sk_iv 0.71); bullish put credit collects that premium with defined risk. Wings are rich so avoid another iron butterfly on top of the open one."
+ },
+ {
+  "entry_date": "2024-10-03",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Front IV still rich (wedge 0.12, iv/rv 1.22) and term structure in backwardation while IV is falling after the selloff; OTM put credit monetizes front premium without adding another ATM short next to the open butterfly."
+ },
+ {
+  "entry_date": "2024-10-04",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.2
+  },
+  "units": 7,
+  "rationale": "IV is 4.3 vol pts rich vs low RV (iv/rv 1.36) with flat term structure; short defined-risk vol in a tenor not already held."
+ },
+ {
+  "entry_date": "2024-10-04",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "Front IV is very rich (wedge +11 pts) and backwardated while IV is already falling; replace the near-expiry short-vol with a fresh defined-risk short."
+ },
+ {
+  "entry_date": "2024-10-11",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "A -9% session with IV already down 7 pts and only a thin wedge leaves little short-vol edge; a further-dated debit call vertical is a defined-risk bounce bet away from front backwardation and the losing near-dated fly."
+ },
+ {
+  "entry_date": "2024-10-16",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 3,
+  "rationale": "IV is ~50% above RV after a sharp IV spike; 31-90 avoids front-month backwardation gamma while still selling rich vol with defined risk. Skip new long premium."
+ },
+ {
+  "entry_date": "2024-10-30",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV is 1.58x realized with front backwardation and rich put skew; a defined-risk bullish credit vertical sells that premium without stacking another iron butterfly on the open 31-90 short-vol position."
+ },
+ {
+  "entry_date": "2024-10-30",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.45,
+   "wing": 0.2
+  },
+  "units": 2,
+  "rationale": "IV nearly 2x realized with extreme skew; a longer-dated iron butterfly harvests rich vol in a tenor distinct from the already-profitable 31-90 credit vertical. Low absolute vol means only one structure, so spread cost does not stack."
+ },
+ {
+  "entry_date": "2024-11-01",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV still rich vs RV and falling, with mild backwardation and put skew; a bullish put credit vertical harvests front premium without adding another short-straddle on top of the open iron butterfly."
+ },
+ {
+  "entry_date": "2024-11-04",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Realized vol far above implied after a sharp down day (iv_rv 0.67, wedge -0.27); bearish debit vertical buys cheap vol with defined risk rather than selling it."
+ },
+ {
+  "entry_date": "2024-11-05",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV is cheap vs realized (iv_rv 0.73, wedge -0.22) and still rising after a +3.5% session. Backwardation makes the back tenor relatively cheaper; a defined-risk call vertical buys that underpriced upside without stacking the already-winning front debit."
+ },
+ {
+  "entry_date": "2024-11-06",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV still rich vs RV (wedge 0.15, iv_rv 1.39) and slipping; modest bullish put-credit vertical harvests premium without stacking the near-dated book."
+ },
+ {
+  "entry_date": "2024-11-15",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "30d IV is far below 21d realized vol and still rising after an up session. A call debit vertical owns that cheap upside with defined premium; the 7dte winner is about to roll off."
+ },
+ {
+  "entry_date": "2024-11-18",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "Front IV is rich vs realized and the curve is backwardated; a defined-risk put credit spread sells elevated near-term premium and steep put skew without adding another short-straddle."
+ },
+ {
+  "entry_date": "2024-11-21",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is far below realized (iv_rv 0.61, wedge -40vol) and spot is drifting down; a debit put vertical buys cheap gamma with defined premium rather than selling vol into that gap."
+ },
+ {
+  "entry_date": "2024-12-02",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "30d iv is flat to rv, but ts +0.096 makes longer-dated iv rich versus realized; defined-risk short vol only in the back bucket where the premium edge can clear the spread. No add on asset_2 (iv already cheap vs rv, iv falling, iron butterfly already on) or asset_3 (rv far above iv, two profitable bullish debit verticals already; do not sell premium or chase)."
+ },
+ {
+  "entry_date": "2024-12-03",
+  "underlying": "SPY",
+  "family": "dg",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "wing": 0.15
+  },
+  "units": 1,
+  "rationale": "Put skew is extreme versus a low IV level (sk_iv 0.72) while IV is already below realized, so a skew-financed bullish reversal collects rich downside premium without adding outright short vol."
+ },
+ {
+  "entry_date": "2024-12-19",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "IV is about 2x realized with steep backwardation, so defined-risk short vol is the cleanest way to harvest the wedge; avoid the front week while IV is still jumping."
+ },
+ {
+  "entry_date": "2024-12-23",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Put skew is extreme versus a flat tape and a thin vol wedge; sell a defined-risk put vertical to harvest rich downside premium without adding another short-vol structure on top of the open iron butterfly. Skip asset_1 (IV already crushed, two IBs on) and asset_3 (extended winning debit verticals, high realized vol, slight backwardation)."
+ },
+ {
+  "entry_date": "2025-01-13",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "Put skew is extreme versus a flat session and only a tiny vol wedge; a defined-risk put credit spread harvests rich downside without adding ATM short vol on top of the open iron butterfly."
+ },
+ {
+  "entry_date": "2025-01-16",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Large down session with IV still below realized vol and front vol in backwardation. Defined-risk bearish debit in the cheaper 31-90 bucket follows momentum without selling vol."
+ },
+ {
+  "entry_date": "2025-01-27",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.15
+  },
+  "units": 4,
+  "rationale": "Crash left IV still below RV and the front rich vs the back; a defined-risk call vertical in the cheaper tenor is a modest bounce bet without adding short vol on top of the open flies."
+ },
+ {
+  "entry_date": "2025-01-28",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 1,
+  "rationale": "Front IV is rich to realized vol and the curve is in backwardation while the session is flat, so a defined-risk short-vol butterfly in the rich tenor has edge if IV stops rising."
+ },
+ {
+  "entry_date": "2025-02-03",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "IV is ~14vol cheap to realized and front is backwardated, so buy longer-dated puts; down session supports the bearish side and defined premium loss."
+ },
+ {
+  "entry_date": "2025-02-10",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV sits well below realized (iv_rv 0.69, wedge -25pt) and the session was strongly up; a longer-dated long call buys cheap vol with capped loss while avoiding the already-open short-vol fly."
+ },
+ {
+  "entry_date": "2025-02-28",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 5,
+  "rationale": "IV is 28% rich to realized and still falling; flat term structure supports a defined-risk short-vol pin in the front month, where theta is highest and the wing caps gap risk."
+ },
+ {
+  "entry_date": "2025-03-03",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is 34% rich to RV and 25d put skew is extreme; sell the rich put wing for a defined-risk bullish credit, away from the existing 11d short-vol book. Front is only mildly backwardated, so the edge is skew/level not calendar."
+ },
+ {
+  "entry_date": "2025-03-11",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "IV is rich vs 21d RV (wedge +5vol, iv/rv 1.28) with front backwardation; defined-risk short vol in the next tenor, not the 3dte loser."
+ },
+ {
+  "entry_date": "2025-03-11",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Same vol premium with a mild down session; bearish call credit vertical harvests rich IV with defined risk and less pin dependence than the butterfly."
+ },
+ {
+  "entry_date": "2025-03-12",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.4,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Same cheap-vol regime, but a debit call spread does not sell puts into a possible reversal. Defined risk, moderate delta, width sized for the vol level so the debit can still clear the spread."
+ },
+ {
+  "entry_date": "2025-03-18",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Sharp down day with backwardation and IV still cheap vs realized; defined-risk put vertical expresses continuation without selling premium."
+ },
+ {
+  "entry_date": "2025-03-19",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "Same cheap-vol vs realized gap with flat term structure; slightly OTM call keeps cost down if the drift fades, loss capped at premium."
+ },
+ {
+  "entry_date": "2025-03-20",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV is ~19 vol pts under 21d RV and still falling, so long premium is the mispricing; mild positive session return supports a bullish outright rather than a pin or short-vol structure."
+ },
+ {
+  "entry_date": "2025-03-20",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "Same cheap-vol wedge with defined risk and lower debit, so the edge is more likely to clear the spread than a naked long call in a 68% RV name."
+ },
+ {
+  "entry_date": "2025-03-26",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "Session drop with IV still far below realized vol and flat skew; defined-risk put vertical hedges existing losing bullish premium without selling cheap vol. Front book already near stops, so no extra short-vol or same-direction adds."
+ },
+ {
+  "entry_date": "2025-03-28",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 2,
+  "rationale": "IV is 15pts under realized vol so premium is cheap; mild put skew makes calls the cheaper wing. Long call hedges the existing bearish debit vertical without selling still-cheap vol. High RV argues against pins or short-vol structures."
+ },
+ {
+  "entry_date": "2025-03-31",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 1,
+  "rationale": "Same IV-versus-RV gap is large enough to clear the spread on a lower-delta call, which keeps premium smaller than a 0.55 delta and still owns gamma while RV stays elevated. Avoids stacking onto the underwater 8-30 long outright."
+ },
+ {
+  "entry_date": "2025-04-03",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Clearest edge: IV is ~18 vol pts below realized and term structure is in backwardation, so longer-dated premium is relatively cheap. Bearish debit vertical buys that cheap convexity with the session's downside momentum and defined risk."
+ },
+ {
+  "entry_date": "2025-04-04",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Front IV rich vs RV and vs the back, put skew extreme after the drop; small defined-risk put credit, not a fresh short-vol add to the losing fly."
+ },
+ {
+  "entry_date": "2025-04-04",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "11% down day with IV still ~11 vol pts under realized; bearish debit vertical keeps downside exposure with capped premium while front vol is already bid."
+ },
+ {
+  "entry_date": "2025-04-11",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "Session strength plus a large negative wedge favors owning near-dated calls rather than selling vol into underpriced realized moves."
+ },
+ {
+  "entry_date": "2025-04-21",
+  "underlying": "SPY",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Down day with IV rising, backwardation, and rich put skew, while IV remains well below RV. Bearish debit in the cheaper part of the curve replaces the expiring short credit vertical without selling cheap vol."
+ },
+ {
+  "entry_date": "2025-04-21",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.35,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Book is already two bearish debit verticals into a -6% day, IV spike, and deep backwardation. A small back-month call spread hedges that crowding where calls are cheap versus elevated skew and front vol is most bid."
+ },
+ {
+  "entry_date": "2025-04-24",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV is far below realized vol and still slipping, so premium is cheap; the session rally supports a defined-loss bullish call that also offsets the existing bearish vertical."
+ },
+ {
+  "entry_date": "2025-05-01",
+  "underlying": "SPY",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Same cheap-vol regime in a shorter bucket, debit vertical cuts premium outlay versus an outright while keeping defined risk if the small up-drift fails."
+ },
+ {
+  "entry_date": "2025-05-05",
+  "underlying": "SPY",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is only 44% of realized and puts are rich versus calls, so a call debit vertical owns cheap upside gamma with defined risk and avoids the skewed put wing. Existing long debit is nearer-dated, so this does not double the same expiry."
+ },
+ {
+  "entry_date": "2025-05-08",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.4,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Wedge is deeply negative and IV is still rising after a +3% session, so defined-risk call premium is the clean long-vol expression. Avoids the 8d bearish vertical that is already near the stop and does not chase with an outright."
+ },
+ {
+  "entry_date": "2025-05-16",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 6,
+  "rationale": "Front IV rich vs RV and backwardated; defined-risk short vol only, sized small because IV is still rising."
+ },
+ {
+  "entry_date": "2025-05-16",
+  "underlying": "SPY",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV well below RV with front cheaper than the back; call debit vertical buys discounted upside vol away from the existing 31-90 long."
+ },
+ {
+  "entry_date": "2025-05-29",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV at or below realized and still falling, so a modest-delta call expresses the upside without paying a vol premium."
+ },
+ {
+  "entry_date": "2025-05-29",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "IV far above realized, front in mild backwardation and already easing; short ATM vol with wings harvests the wedge while existing debit verticals stay separate."
+ },
+ {
+  "entry_date": "2025-06-12",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 1,
+  "rationale": "IV is 34% above RV with a positive wedge and rising IV, so front short vol has the cleaner edge. Existing bullish debit vertical is nearly expired; do not add another directional long."
+ },
+ {
+  "entry_date": "2025-06-23",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 5,
+  "rationale": "Rich 25d puts vs a flat session support a defined-risk put credit vertical; short delta and tight width keep premium collection inside the skew without leaning on a thin vol wedge."
+ },
+ {
+  "entry_date": "2025-06-25",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "Put skew is extreme (sk_iv 0.49) with contango and only a thin iv-rv wedge; a defined-risk bullish credit vertical sells that skew beyond the existing 8dte winner rather than chasing the +4% session."
+ },
+ {
+  "entry_date": "2025-06-25",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is cheap to realized (wedge -0.08, iv_rv 0.89) after a -3.9% break and near-term backwardation; a bearish debit vertical buys underpriced downside without adding to the already +200% bullish vertical."
+ },
+ {
+  "entry_date": "2025-06-26",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.2
+  },
+  "units": 2,
+  "rationale": "IV is rich vs realized (iv_rv 1.33) and slipping; defined-risk short vol in the front where theta is highest. Wings kept tight enough to matter but wide enough that the modest absolute IV still clears spread."
+ },
+ {
+  "entry_date": "2025-06-30",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.2
+  },
+  "units": 5,
+  "rationale": "IV rich vs realized with upward term structure and a quiet session; defined-risk short vol away from the near-dated credit vertical."
+ },
+ {
+  "entry_date": "2025-06-30",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Realized vol exceeds implied, term structure is inverted, and the session sold off; defined-risk bearish debit in a tenor not already held."
+ },
+ {
+  "entry_date": "2025-07-01",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Same rich put wing and positive wedge; collect premium on a shallow bullish credit vertical if the reversal is too path-dependent."
+ },
+ {
+  "entry_date": "2025-07-02",
+  "underlying": "NVDA",
+  "family": "dg",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "wing": 0.2
+  },
+  "units": 1,
+  "rationale": "Put skew is extreme versus a only modestly rich, falling IV. A skew-financed bullish reversal harvests that without adding another short-vol structure beside the open iron butterfly; defined wing keeps risk capped. No add on asset_2: IV-RV richness is real but the 8dte short-vol book is already losing and spreads can consume a 4-vol-point edge. No add on asset_3: IV is cheap to realized and the curve is backwardated, so short-vol families are the wrong side, and another bullish debit would chase a +4.8% session already expressed in open risk."
+ },
+ {
+  "entry_date": "2025-07-14",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 1,
+  "rationale": "IV is about 2.1x realized and the term structure is backwardated, so front premium is the rich part of the curve. Defined-risk short vol in 8-30 harvests that wedge without stacking onto the existing 31-90 bullish credit vertical; wider wings respect the still-rising IV. No directional add: session return is flat."
+ },
+ {
+  "entry_date": "2025-07-17",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 3,
+  "rationale": "IV 22% vs RV 9% (iv/rv 2.4); even 90d IV near 15.5% stays rich after backwardation. Defined-risk short vol, tenor avoids the existing 11d front iron butterfly."
+ },
+ {
+  "entry_date": "2025-07-23",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 1,
+  "rationale": "Flat session, IV still rich vs RV (wedge 0.14, iv_rv 1.30) with little IV change; 31-90 avoids the steepest front backwardation while harvesting elevated premium with defined risk. No new directional stack given opposing open debit verticals."
+ },
+ {
+  "entry_date": "2025-08-06",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Skew is extreme versus a modest vol wedge and normal contango; collect put premium with defined risk, not a naked short-vol bet."
+ },
+ {
+  "entry_date": "2025-08-12",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Skew is very high (0.13) but IV is only slightly above RV and an iron butterfly is already open in 31-90, so do not add short vol. A bullish put credit vertical monetizes rich downside premium with defined risk in a tenor not already occupied."
+ },
+ {
+  "entry_date": "2025-08-14",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.3
+  },
+  "units": 3,
+  "rationale": "IV is nearly 2x realized with a 22-vol wedge, so defined-risk short vol is the only clear edge; skip the backwardated front and use wider wings because IV is still rising and the short body is unhedged."
+ },
+ {
+  "entry_date": "2025-08-15",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.3
+  },
+  "units": 4,
+  "rationale": "IV nearly 2x realized with front backwardation; defined-risk short vol in the richer front bucket, away from the existing 31-90 iron butterfly."
+ },
+ {
+  "entry_date": "2025-08-19",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Front short-vol and the nearer bullish credit are already on; after the IV crush, residual put skew still pays for a defined-risk bullish credit further out the curve where term structure is not inverted. Width kept tight so the edge is not spent on the spread."
+ },
+ {
+  "entry_date": "2025-08-28",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 3,
+  "rationale": "IV still ~13vol rich to RV after a partial crush; defined short-vol in a nearer tenor than the open 31-90 bullish credit vertical, so theta harvest is not stacked on the same expiry."
+ }
+]

@@ -182,8 +182,14 @@ cython_debug/
 
 .DS_Store
 
-# SOTA project: local market data cache, journal, secrets
-/data/
+# SOTA project: local market data cache, journal, secrets.
+# data/ is ignored except data/bt/**/*.csv|json, the trade-by-trade results behind the README tables.
+/data/*
+!/data/bt/
+/data/bt/**
+!/data/bt/**/
+!/data/bt/**/*.csv
+!/data/bt/**/*.json
 *.sqlite
 *.sqlite-journal
 *.parquet

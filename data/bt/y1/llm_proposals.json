@@ -1,0 +1,1122 @@
+[
+ {
+  "entry_date": "2024-09-03",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 1,
+  "rationale": "IV is 16pts below 21d RV after a -10% session; long put buys underpriced vol aligned with downside momentum."
+ },
+ {
+  "entry_date": "2024-09-04",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "IV is ~20% below 21d realized and still falling; buy the cheaper call wing so long premium is not stacked on the existing 16d bearish outright."
+ },
+ {
+  "entry_date": "2024-09-06",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 1,
+  "rationale": "Front IV is ~11 vol pts under 21d RV and cheaper than the back; call side avoids rich put skew after the selloff, so long premium is the clean expression."
+ },
+ {
+  "entry_date": "2024-09-12",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "Front IV is in backwardation and a few points above realized vol, so a defined-risk short-vol range is the only structure with a clear enough premium edge; wings keep risk bounded if the high-vol name gaps."
+ },
+ {
+  "entry_date": "2024-09-16",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV rich vs RV (wedge +4.1pts, iv/rv 1.31), flat session, mild skew and low butterfly; defined-risk range short in contango, away from front-month gamma. No existing book."
+ },
+ {
+  "entry_date": "2024-09-24",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "30d IV is ~14 vol pts under 21d realized (iv/rv 0.77) and still falling; a defined-risk put vertical buys that cheap downside convexity without adding to the already-large winning call. Front bucket matches the realized-vol window; skip further upside chase after a +3.9% session."
+ },
+ {
+  "entry_date": "2024-09-25",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.2,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "30d IV is rich to realized (+13.5pts, iv/rv 1.24) and the curve is in backwardation, so front premium is the expensive part. A wider, lower-delta iron condor shorts that vol with room for 55% realized vol; no pin bet."
+ },
+ {
+  "entry_date": "2024-09-27",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.4
+  },
+  "units": 1,
+  "rationale": "Cheap implied vs realized supports owning premium. Longer tenor reduces theta versus 0-7; modest delta limits overlap with the already-profitable long call."
+ },
+ {
+  "entry_date": "2024-09-27",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Flat tape and elevated skew favor collecting put premium with defined risk rather than buying options. Smaller delta keeps the short strike further OTM given only a thin vol edge."
+ },
+ {
+  "entry_date": "2024-09-30",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "IV 30% above RV, term structure in backwardation, and IV falling: sell rich front ATM vol with wings. Distinct from the open condor (body at ATM, wider wings)."
+ },
+ {
+  "entry_date": "2024-10-03",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "IV still rich to RV and already falling after the selloff; a further-dated, wider condor is a different risk bucket from the two 8d short-vol positions, and front-month backwardation is left alone."
+ },
+ {
+  "entry_date": "2024-10-04",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "30d IV is 36% above realized with a flat term structure; a tighter front condor harvests the wedge without stacking the existing 31-90 condor."
+ },
+ {
+  "entry_date": "2024-10-10",
+  "underlying": "TSLA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "wing": 0.25
+  },
+  "units": 2,
+  "rationale": "Front IV is 23pts over RV and the curve is in backwardation while IV is ticking down; sell the rich near-dated ATM vol with defined wings rather than adding to the existing 31-90 condor."
+ },
+ {
+  "entry_date": "2024-10-11",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 5,
+  "rationale": "Put skew is elevated (sk 0.13, sk/iv 0.28) while the session is flat. A bullish put credit vertical sells the rich wing with defined risk; skip if it doubles the open long-call risk into the same expiry week."
+ },
+ {
+  "entry_date": "2024-10-15",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.2,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Front is only modestly rich to RV and already short via the open iron butterfly; a wide, low-delta back-month condor is the only incremental short-vol expression that does not stack on the existing 8-30 and 31-90 shorts. Skip if spread is wide."
+ },
+ {
+  "entry_date": "2024-10-18",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 3,
+  "rationale": "IV is ~21 vol pts above realized and the curve is in backwardation, so front premium is the rich part of the surface. Defined-risk condor only; IV is still rising, so keep strikes wide and do not add a second short-vol structure if this overlaps the open 7d credit vertical."
+ },
+ {
+  "entry_date": "2024-10-22",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "IV still ~18pts over RV and term structure is backwardated, but front tenors are already occupied by a near-expiry credit vertical and a live condor. A further-OTM 31-90 condor harvests residual richness without stacking front short gamma."
+ },
+ {
+  "entry_date": "2024-10-30",
+  "underlying": "NVDA",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "wing": 0.25
+  },
+  "units": 6,
+  "rationale": "Same rich-vol, inverted term structure; ATM short with wings if the name pins after the small down day. Wider wing keeps gap risk bounded."
+ },
+ {
+  "entry_date": "2024-10-31",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV is rich vs 21d realized (iv_rv 1.74, wedge +8vol) with only mild backwardation; a defined-risk condor in the 31-90 bucket harvests that premium away from the richer front while IV is still bid."
+ },
+ {
+  "entry_date": "2024-11-01",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "Front vol is rich versus 11% realized and the curve is in mild backwardation, so a tighter short-dated condor harvests the wedge without leaning only on the put wing."
+ },
+ {
+  "entry_date": "2024-11-04",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV 27 vol pts under 21d realized and did not reprice on a -2.5% session, so near-dated long gamma is cheap; debit put vertical keeps risk defined and matches the down tape without adding short vol beside the existing condors."
+ },
+ {
+  "entry_date": "2024-11-06",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV still rich to realized and put skew is elevated, so a defined-risk put credit vertical monetizes carry without adding another ATM short on top of the open IB/IC. Mild backwardation argues against selling longer-dated vol."
+ },
+ {
+  "entry_date": "2024-11-14",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "Front IV is rich vs 21d realized (wedge ~21 vol pts, iv/rv 1.61) and the curve is in mild backwardation, so a defined-risk short-vol condor in the front bucket harvests elevated premium. Delta kept inside the range and slightly conservative given existing 31-90 short-vol exposure; flat session return gives no directional overlay."
+ },
+ {
+  "entry_date": "2024-11-18",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV jumped 4.7pts on a flat tape and still sits ~4.6pts over RV; defined-risk short vol, no existing book, wings sized to clear the spread."
+ },
+ {
+  "entry_date": "2024-11-21",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Put skew is extreme vs a modest IV level (sk_iv 0.52) while front vol is in backwardation and already owned as a slightly losing IC. A bullish put credit vertical monetizes rich downside premium with defined risk and avoids adding short-vol in the event-rich front."
+ },
+ {
+  "entry_date": "2024-12-04",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is about 20 points under realized and rising, with a positive session. A call debit vertical keeps defined risk while the vol wedge is large enough to clear the spread; do not sell vol into backwardation and a rising IV."
+ },
+ {
+  "entry_date": "2024-12-11",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 5,
+  "rationale": "Back-end IV is richer than 38% realized via steep contango while front IV is already slipping; defined-risk range sale, not a chase of the existing short-dated bullish credit."
+ },
+ {
+  "entry_date": "2024-12-16",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV is 2.5x realized with a wide wedge and calm spot; a defined-risk front condor harvests that richness outside the existing 31-90 book. Rising IV keeps size modest and strikes further OTM."
+ },
+ {
+  "entry_date": "2024-12-17",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 3,
+  "rationale": "Front IV is rich vs RV (iv_rv 1.79) and the curve is in backwardation, so a defined-risk short-vol range harvests the wedge without adding naked tail risk. Wider wings respect the elevated put skew and rising IV."
+ },
+ {
+  "entry_date": "2024-12-20",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Skew is very elevated while IV fell on the drop; sell rich puts further OTM rather than buy expensive downside."
+ },
+ {
+  "entry_date": "2025-01-03",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Front IV is in backwardation after a 7.9% spike while iv is still below rv; a defined-risk put vertical in the cheaper part of the curve fades the move without selling vol."
+ },
+ {
+  "entry_date": "2025-01-06",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV is 10pts rich to RV with low wing curvature; a further-OTM defined-risk condor in an unused tenor harvests that wedge without stacking the existing 101d condor. Rising IV keeps size conservative."
+ },
+ {
+  "entry_date": "2025-01-07",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is below realized vol and the curve is in backwardation, so longer-dated premium is the cheaper long-vol expression. Defined-risk bullish debit is a bounce hedge that does not add to the existing bearish debit vertical or sell cheap vol."
+ },
+ {
+  "entry_date": "2025-01-13",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Put skew is extreme (sk_iv 0.55) while spot is flat and the iv-rv wedge is tiny, so a defined-risk bullish put credit vertical harvests rich downside premium without a short-vol bet. Width kept tight so the skew edge can clear the spread."
+ },
+ {
+  "entry_date": "2025-01-14",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Same skew edge in a shorter tenor: sell the rich OTM put and buy a further wing. Vol premium over realized is too small to justify an iron condor or butterfly, and the open credit vertical is already in 31-90."
+ },
+ {
+  "entry_date": "2025-01-23",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "Front IV is rich to RV and the curve is backwardated while spot is flat; a defined-risk condor sells that near-dated premium without adding direction. Existing long-dated condor is a different tenor, so overlap is limited. Edge is only moderate, so keep the short strike away from spot."
+ },
+ {
+  "entry_date": "2025-01-23",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV/RV at 1.35 with IV still falling and mild backwardation is the clearest short-vol case. An iron condor harvests richness without stacking another bullish credit vertical on top of two open long CVs, one of which is nearly expired."
+ },
+ {
+  "entry_date": "2025-01-31",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV still cheap vs 85% realized vol, term structure in backwardation and IV rising after a -3.7% session; long put expresses continuation without selling vol into a deficit."
+ },
+ {
+  "entry_date": "2025-02-03",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV rich vs RV and still rising; slight front backwardation and elevated skew support a defined-risk short-vol range, away from the existing 32d condor."
+ },
+ {
+  "entry_date": "2025-02-05",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV exceeds realized (wedge +6.9, iv/rv 1.15) with contango, so short vol belongs in the richer belly, not the cheaper front. Defined-risk condor; no new directional bet given mixed open verticals."
+ },
+ {
+  "entry_date": "2025-02-06",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.15
+  },
+  "units": 3,
+  "rationale": "IV is far below realized and term structure is backwardated, so a defined-risk call vertical in the cheaper back month buys underpriced vol without adding short-vol exposure on top of the open condor. The up session supports a mild bullish lean; width keeps debit and spread cost contained."
+ },
+ {
+  "entry_date": "2025-02-07",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV sits well below 21d realized (wedge -0.21, iv/rv 0.75) and term structure is backwardated, so near-dated upside convexity is cheap versus recent movement; mild positive session return supports a bullish long call rather than another short-vol structure on top of the open iron condor."
+ },
+ {
+  "entry_date": "2025-02-11",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Large down session with IV up 3pts and only a modest vol premium; a call credit vertical sells the spike with defined risk and matches the move without adding another short-strangle while the open iron condor is already losing."
+ },
+ {
+  "entry_date": "2025-02-18",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV rich to RV by ~9 vol pts. Sell a wider, further tenor than the existing condor so front backwardation and rising IV are less of the bet."
+ },
+ {
+  "entry_date": "2025-02-19",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Puts are rich (sk 0.14, sk_iv 0.25) and IV still sits above RV; a defined-risk bullish put credit collects that skew without stacking another iron condor on the two already open."
+ },
+ {
+  "entry_date": "2025-02-20",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "IV is 24pts under 21d RV and still falling; buy defined-premium upside while realized vol remains elevated."
+ },
+ {
+  "entry_date": "2025-03-03",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV rich vs realized (iv/rv 1.34, positive wedge) and front elevated vs the back; defined-risk short vol, strikes wide enough to respect steep put skew."
+ },
+ {
+  "entry_date": "2025-03-05",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Positive wedge and falling IV support a further-dated short-vol range; wider tenor avoids stacking the open 8-30 condor."
+ },
+ {
+  "entry_date": "2025-04-03",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Same cheap-vol stress regime, but a put debit vertical cuts premium and spread cost versus an outright while keeping defined-risk downside exposure."
+ },
+ {
+  "entry_date": "2025-04-04",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Front IV rich vs RV, spiked, and backwardated; defined-risk short vol in the expensive tenor only."
+ },
+ {
+  "entry_date": "2025-04-08",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 4,
+  "rationale": "IV exceeds realized by ~15 vol pts with only a modest session decline; defined-risk condor sells the rich front while wider wings respect backwardation and a small IV uptick."
+ },
+ {
+  "entry_date": "2025-04-16",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "short",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "Near-term stress and rising IV after a -7% session; long put keeps upside to further realization while loss is capped at premium."
+ },
+ {
+  "entry_date": "2025-04-16",
+  "underlying": "SPY",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "IV/RV about 0.58 so premium is cheap, but put skew is extreme; buy calls via a debit vertical and do not sell the rich put wing."
+ },
+ {
+  "entry_date": "2025-04-16",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Largest negative wedge and strong backwardation after a sharp drop; defined-risk puts in the cheaper 31-90 bucket, not short vol."
+ },
+ {
+  "entry_date": "2025-04-17",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45
+  },
+  "units": 1,
+  "rationale": "Same cheap-vol vs realized gap with flat skew; a moderate-delta call is long gamma if realized stays elevated, sized apart from the existing short."
+ },
+ {
+  "entry_date": "2025-04-17",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Defined-risk long vol where implied still sits well below realized; bullish side diversifies the existing short debit rather than adding short premium into a large negative wedge."
+ },
+ {
+  "entry_date": "2025-04-22",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV is far below realized (iv_rv 0.63, wedge -0.32) so premium is cheap versus recent movement; modest up-day and rich put skew favor a defined-loss long call rather than short-vol structures."
+ },
+ {
+  "entry_date": "2025-04-22",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Vol is still below realized but the curve is deeply backwardated, so front premium is relatively rich; a longer-dated call vertical expresses the up-move with less term-structure drag and does not stack on the conflicting 31-90 book."
+ },
+ {
+  "entry_date": "2025-05-19",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "Front IV is rich vs 21d realized (wedge ~15pts, iv/rv 1.34) and the curve is in sharp backwardation, so a defined-risk OTM condor sells elevated near-term premium without a directional bet. Rising IV argues for wider wings and not the ATM fly."
+ },
+ {
+  "entry_date": "2025-05-20",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "Front IV is rich vs realized (wedge 0.16, iv/rv 1.38) and term structure is in backwardation, so a defined-risk short-vol range in the expensive near tenor has edge; existing IC is nearly expired."
+ },
+ {
+  "entry_date": "2025-05-28",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Front IV is far above realized and the curve is backwardated, so a wider defined-risk condor harvests the wedge; wings stay wide because IV is still rising."
+ },
+ {
+  "entry_date": "2025-05-29",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV still ~17.5 vol over RV after a 4-vol decline, with mild backwardation. Defined-risk short vol in 31-90 avoids stacking the open 8-30 condor; wide realized vol argues for a wider short strike than ATM."
+ },
+ {
+  "entry_date": "2025-05-30",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Same skew premium, smaller expression: bullish put credit vertical, short strike further OTM so spread cost is more likely covered by the skew edge."
+ },
+ {
+  "entry_date": "2025-06-04",
+  "underlying": "NVDA",
+  "family": "ol",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5
+  },
+  "units": 1,
+  "rationale": "IV sits ~5.5 vol under RV with steep contango, so front premium is cheap; mild positive session and rich put skew make a defined-premium long call the cleaner expression than selling vol."
+ },
+ {
+  "entry_date": "2025-06-05",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Front IV rich vs RV and in backwardation after a shock; OTM iron condor harvests elevated near-term vol with defined risk, away from ATM gamma."
+ },
+ {
+  "entry_date": "2025-06-10",
+  "underlying": "NVDA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.1
+  },
+  "units": 5,
+  "rationale": "Front IV is below realized and the term structure is in contango, so a defined-risk bullish debit is the cleaner expression of cheap vol plus a mild up drift; existing long call already covers outright delta."
+ },
+ {
+  "entry_date": "2025-06-16",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "IV rich vs low realized vol in contango and a quiet tape; iron condor harvests premium without doubling the existing bullish credit vertical."
+ },
+ {
+  "entry_date": "2025-06-16",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.5,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "Realized vol exceeds implied and IV is falling, so avoid more short vol; a defined-risk call vertical expresses the up move without paying an IV premium."
+ },
+ {
+  "entry_date": "2025-06-26",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "short",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.4,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV below RV and backend cheaper still (backwardation); defined-risk long puts, no short-vol add against existing bullish DV."
+ },
+ {
+  "entry_date": "2025-06-27",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "30d IV sits above realized and 25d put skew is rich versus IV; a defined-risk put credit vertical harvests that skew with front-month theta. Kept modest because IV is still rising."
+ },
+ {
+  "entry_date": "2025-06-30",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 4,
+  "rationale": "IV exceeds RV by ~7 vol pts with upward term structure and quiet session return; defined-risk short-vol range in 31-90 avoids stacking the open 8-30 bullish credit vertical. Modest butterfly and wide skew argue for a tighter short delta so wings clear the put-rich tail."
+ },
+ {
+  "entry_date": "2025-07-01",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "IV rich vs RV with contango; sell a defined-risk put spread for a bounce rather than adding another iron condor."
+ },
+ {
+  "entry_date": "2025-07-02",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV is clearly rich versus a 10% realized tape (iv_rv 1.36, wedge +3.7 vol) with no directional impulse. A front iron condor is a different tenor from the open 31-90 condor; stay further OTM so the spread does not eat a small absolute vol edge."
+ },
+ {
+  "entry_date": "2025-07-02",
+  "underlying": "TSLA",
+  "family": "dv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.45,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "IV is cheap to realized (wedge -10 vol, iv_rv 0.86) and the term structure is in backwardation, so 30d is the expensive bucket. A defined-risk call vertical in 31-90 buys relatively cheaper vol with the up-move, without adding outright premium or another 91-180 debit (already +136%)."
+ },
+ {
+  "entry_date": "2025-07-07",
+  "underlying": "NVDA",
+  "family": "cv",
+  "side": "short",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 6,
+  "rationale": "Call-side credit avoids selling the expensive put wing; mild down session and positive term structure support a defined-risk bearish premium sale."
+ },
+ {
+  "entry_date": "2025-07-15",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 3,
+  "rationale": "IV 1.86x RV with steep backwardation and a fresh IV spike; defined-risk short vol in the rich front bucket, away from the existing 31-90 condor. No directional chase after the +4% session."
+ },
+ {
+  "entry_date": "2025-07-16",
+  "underlying": "SPY",
+  "family": "ib",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.45,
+   "wing": 0.2
+  },
+  "units": 2,
+  "rationale": "IV/RV above 2.5 and a large wedge with backwardation favor short front vol; a tighter wing than the open condor keeps risk defined and targets the overpriced ATM."
+ },
+ {
+  "entry_date": "2025-07-29",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "Front IV is rich vs 27% realized (wedge +18vol) and still in backwardation while IV is falling; a fresh defined-risk condor replaces the 3dte winner rather than adding to the losing 17dte condor."
+ },
+ {
+  "entry_date": "2025-07-29",
+  "underlying": "SPY",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "IV is ~1.9x a 7% realized vol with positive term structure, so short-vol premium sits in the back; keep wings tight because the open condor is already near expiry and losing."
+ },
+ {
+  "entry_date": "2025-08-04",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 3,
+  "rationale": "Front IV is far above realized vol and the curve is backwardated, so a defined-risk short-vol range still has edge; keep wings wider after the large up day and do not stack size on the existing condor."
+ },
+ {
+  "entry_date": "2025-08-04",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Same rich downside skew supports a defined-risk bullish credit put vertical rather than buying expensive puts; mild contango favors the 31-90 bucket over the front."
+ },
+ {
+  "entry_date": "2025-08-06",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV still ~18 vol pts over RV and falling; mild backwardation. One longer-tenor condor only, away from the two 9d front condors already on."
+ },
+ {
+  "entry_date": "2025-08-14",
+  "underlying": "TSLA",
+  "family": "cv",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 2,
+  "rationale": "Puts are very expensive versus calls (sk 0.16) while the vol wedge is only modest; a defined-risk bullish credit vertical sells that skew and offsets the underwater longer-dated bearish debit vertical instead of adding to it."
+ },
+ {
+  "entry_date": "2025-08-15",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "8-30",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 7,
+  "rationale": "IV nearly 2x RV with mild backwardation; front iron condor sells the richest slice, defined risk, distinct from the existing 31-90 condor."
+ },
+ {
+  "entry_date": "2025-08-20",
+  "underlying": "NVDA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.1
+  },
+  "units": 3,
+  "rationale": "IV is ~22 vol pts over realized and already-short front condors leave the back month as the cleaner defined-risk short-vol add; slight backwardation argues for wider, lower-delta wings."
+ },
+ {
+  "entry_date": "2025-08-22",
+  "underlying": "SPY",
+  "family": "cv",
+  "side": "long",
+  "tenor": "91-180",
+  "coords": {
+   "delta": 0.3,
+   "width": 0.1
+  },
+  "units": 1,
+  "rationale": "Put skew is extreme (sk_iv 0.67) while iv is not rich vs rv, so a bullish put credit vertical harvests skew in a tenor not already held; defined risk and no extra short-vol stack."
+ },
+ {
+  "entry_date": "2025-08-27",
+  "underlying": "TSLA",
+  "family": "ic",
+  "side": "long",
+  "tenor": "31-90",
+  "coords": {
+   "delta": 0.25,
+   "width": 0.15
+  },
+  "units": 1,
+  "rationale": "IV rich vs RV (wedge 0.16, iv/rv 1.45) and IV is falling. Defined-risk short vol further OTM to respect steep put skew and spread. No extra direction: existing short debit is already losing."
+ }
+]

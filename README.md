@@ -49,23 +49,147 @@ trades under the current limits; files come from `sota backtest --out DIR`). Cos
 
 ## Forward test — pre-registered 2026-10-14
 
-Three historical years gave no consistent edge with the paper's full menu (iron condors lost in two
-of three years and drove the one big winner); replays without condors were modest and positive in
-two of three years (-9.8% / +18.5% / +10.7%, worst drawdown 12.4%). That configuration — `llm`
-selector, families `ol dv cv dg ib bf`, $50k, Robinhood costs, unhedged — is now paper trading on
-Alpaca, one decision per day at 15:50 ET. The following criteria were fixed **before** the first
-run and are evaluated by `sota scorecard` and the cockpit (`src/sota/scorecard.py`):
+**Status (2026-10-14, evening): paused after one day.** The new backtests we ran the same evening
+(see "Results" below) showed that this setup lost 51% in the 2023-24 year. There is no reason to
+keep testing it. We keep the rules here as a record of how the test was planned.
 
-| # | criterion | threshold |
+The plan was: `llm` selector, families `ol dv cv dg ib bf` (no iron condors), $50k account,
+Robinhood costs, no hedging, one decision per day at 15:50 ET on the Alpaca paper account. The rules
+below were written down **before** the first run. `sota scorecard` and the web page check them
+(`src/sota/scorecard.py`).
+
+| # | rule | limit |
 |---|---|---|
-| C1 | total return after costs | > 0 at 6 months; > ~4% (cash) at 12 months |
-| C2 | maximum drawdown, daily closes | < 15% at every point |
-| C3 | trade rate (annualized after 60 days) | 20–50 per year |
+| C1 | total return after costs | more than 0 at 6 months; more than ~4% (cash rate) at 12 months |
+| C2 | maximum drawdown, daily closes | less than 15% at every point |
+| C3 | number of trades (per year, counted after 60 days) | 20 to 50 |
 | C4 | worst calendar month | better than −8% |
 
-Verdict rule: two or more failures at the 6-month checkpoint end the experiment. All four must pass
-at 12 months before any real-money (advisory-ticket) use, and then only at a fraction of size.
-Changing the configuration restarts the clock.
+If two or more rules fail at 6 months, the test ends. All four must pass at 12 months before any
+real money is used, and then only with a small part of the account. If the setup changes, the clock
+starts again from zero.
+
+## Results — what we found (2026-10-14)
+
+This part is for a person who wants to know one thing: does the idea from the paper make money for
+a normal retail account? Short answer: **no, not in our tests.** Below is how we got to that answer.
+
+### How we tested
+
+- Real option prices from Theta Data (end of day) for SPY, NVDA and TSLA, from June 2023 to
+  October 2026. The data is not adjusted for stock splits (NVDA did a 10:1 split in June 2024), so
+  the code handles that.
+- Three test years. Year 0 = Sep 2023 to Aug 2024. Year 1 = Sep 2024 to Aug 2025 (this one contains
+  the paper's own test period, Mar to Aug 2025). Holdout = Oct 2025 to Oct 2026. The holdout year
+  is after the paper was written, so no model could have seen it before.
+- A retail setup: $50,000 account, Robinhood fees, no hedging with shares, and every fill pays half
+  of the bid-ask spread. The paper uses $1,000,000, hedging and lower costs. We tested that setup
+  too (see below).
+- Three selectors. `threshold` = the rules from the paper (Table 8). `llm` = Grok 4.7, given the
+  same state and the same list of strategies as in the paper; it never sees prices, tickers or
+  dates. `oracle` = it can look at the future, so it shows the best result possible. It is not a
+  strategy. It is the ceiling.
+- All numbers are total return after costs for the year. MDD = maximum drawdown = the biggest fall
+  from a high point to a low point.
+
+### The numbers
+
+| selector | Year 0 (Sep 23 – Aug 24) | Year 1 (Sep 24 – Aug 25) | Holdout (Oct 25 – Oct 26) |
+|---|---|---|---|
+| threshold rules | −51.7% (MDD 52%) | +24.4% (MDD 18%) | −14.9% (MDD 29%) |
+| LLM, all families | **−33.6%** (MDD 36%) | +9.8% (MDD 26%) | +31.6% (MDD 11%) |
+| LLM, no iron condors | **−51.2%** (MDD 54%) | +28.5% (MDD 14%) | +11.9% (MDD 20%) |
+| oracle (ceiling) | +186% | +153% | +88% (first half only) |
+
+All rows use the same $50k retail setup and the same list of strategies (the nine families from the
+paper, minus long straddles and strangles, because those do not make sense without hedging). The
+oracle number for the holdout covers only Oct 2025 to Apr 2026, because the oracle needs to see up
+to 180 days into the future and our data ends in Oct 2026.
+
+Every real selector has at least one bad year. The two LLM rows are the important ones. Both lose
+between one third and one half of the account in Year 0. You cannot put money in a strategy that
+can do that.
+
+### Why it loses
+
+We exported every trade from every run (`sota backtest --out`) and looked at where the money went.
+
+1. **The LLM sells volatility, no matter which strategies you allow.** With all families allowed,
+   about 40 of its ~65 trades per year are iron condors (sell a call spread and a put spread far
+   from the price). Those made −$11.9k in Year 0, −$5.4k in Year 1 and +$8.9k in the holdout. When
+   we took iron condors away, it moved to iron butterflies (same idea, but sell at the current
+   price, buy wings for protection) for 31% to 58% of its trades. Those made −$21.2k, +$8.0k and
+   +$6.1k. Same bet, different name, worse result.
+2. **Selling volatility works in quiet years and breaks in trending years.** In Year 0, NVDA went
+   up 3x and TSLA moved 10% in one week around earnings. When this happens, the position jumps past
+   the stop loss between one close and the next, so the loss is much bigger than planned. In Year 0,
+   32 trades hit the stop loss. Every one was a loss. Total: −$23k.
+3. **The stop loss is not the problem.** We replayed the same trades with a wider stop and with no
+   stop. Both were worse in Year 0 and Year 1. The 60% stop does its job.
+4. **The good years were not skill.** The trades that made money in Year 1 and the holdout were
+   long calls and long call spreads on SPY, NVDA and TSLA, during a strong bull market. Every
+   bearish trade the LLM made lost money (0 wins out of 6 long puts). The market went up. The model
+   was not right; it was carried.
+
+### Does a bigger account help?
+
+No. We replayed the same trades with $50k, $100k, $250k and $1M. Year 0 is between −51% and −55% at
+every size. The percent does not change. A bigger account only loses more dollars.
+
+Hedging is a different story. With $1M, hedging with shares and the paper's low costs (the exact
+setup of the paper), Year 0 becomes −11%. But Year 1 becomes +10% and the holdout becomes −2.5%.
+Over three years that is about −4% in total, with a Sharpe ratio near zero. Hedging removes the
+disaster, but it also removes the profit. What is left is worse than a savings account.
+
+### Is the paper wrong?
+
+Not exactly. Over the paper's own six-month period (Mar to Aug 2025), our environment gives similar
+numbers. The paper reports +18.3% for its trained agent. Our oracle shows that +20% was possible in
+that period with the paper's setup, and our LLM trades replayed in the paper's setup give +10%. So
+the paper's number is believable. The problem is the period. Six months is too short, and those six
+months were a good time for selling volatility. Run the same idea over three years and there is no
+edge. We did not run the authors' own trained model, so we cannot say *their* model fails. We can
+say that the framework with a strong general LLM does not survive a trending year, and no selector
+we built did either.
+
+### What we take from this
+
+- The paper is a useful **framework**: the features, the strategy families, the resolvers, the
+  risk limits, the exits, the metrics. All of this is implemented here, tested, and works. The
+  oracle numbers prove the environment is correct: there is money to make every year, but the
+  selector cannot find it.
+- The paper is **not a strategy** you can trade with a retail account. Do not put money in it.
+- The first day of paper trading (2026-10-14) also found two problems that only show up with real
+  orders. Orders sent at the mid price did not fill in the last ten minutes of the session (fixed:
+  orders now go out at the price the backtest assumes). Close orders were trusted without checking
+  (fixed: if a close does not fill, the position goes back to open). Both fixes are in this repo.
+- Total cost to learn all this: about $120 in LLM credits, and no money lost in the market.
+
+### Ideas we did not test, and why we stopped
+
+- **Only buy options, never sell premium.** This part of the book made money in two of three years
+  (about +4% per year). But all of it came from bullish trades in a bull market. Just holding SPY
+  did much better in the same period. A proper test costs about $40 in LLM credits. We think the
+  answer is already clear.
+- **A filter for trending markets** (stop trading when the market trends strongly). This goes
+  after the real problem. But we would design it after seeing the data, so it would need its own
+  clean test on new data. It is cheap to try with the replay tool (`-s replay:...`) if someone
+  wants to.
+
+### Reproduce
+
+```bash
+uv run sota fetch 2023-06-01 2026-10-09                      # Theta Data free tier, ~2 hours
+uv run sota backtest 2023-09-01 2024-08-30 -s threshold -s llm -s oracle --out data/bt/y0
+uv run sota backtest 2024-09-03 2025-08-29 -s threshold -s llm -s oracle --out data/bt/y1
+uv run sota backtest 2025-10-13 2026-10-09 -s threshold -s llm --out data/bt/holdout
+scripts/replay_grid.sh                                        # family / stop variants, from cache
+uv run sota backtest 2023-09-01 2024-08-30 -s replay:data/bt/y0/llm_proposals.json --nav 1000000
+```
+
+The LLM runs cost about $12 to $15 per year with `grok-4.7` at low reasoning effort. Every reply is
+cached under `data/llm_cache/`, so running the same test again is free. The trade-by-trade CSV
+files behind the tables above are in `data/bt/`.
 
 ## Paper schedule
 
