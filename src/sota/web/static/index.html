@@ -71,6 +71,7 @@ th.r,td.r{text-align:right}
 .tag.stop{background:var(--red-bg);color:var(--red)}.tag.force_close{background:var(--blue-bg);color:var(--blue)}
 .tag.expired{background:var(--panel-2);color:var(--muted)}.tag.selector_close{background:var(--amber-bg);color:var(--amber)}
 .legs{color:var(--muted);font-family:var(--mono);font-size:11px;margin-top:2px;white-space:normal;max-width:420px}
+.why{white-space:normal;min-width:260px;max-width:420px;color:var(--muted)}
 .scroll{overflow-x:auto}
 .bar{height:4px;border-radius:2px;background:var(--line-2);position:relative;margin-top:5px;width:120px}
 .bar i{position:absolute;top:0;bottom:0;border-radius:2px}
@@ -278,8 +279,8 @@ function posRow(p,closed){
     <td class="r num">${fmt.sn(p.entry_premium)}</td>
     <td class="r num">${closed?fmt.sn(p.exit_premium):(p.mark==null?'<span class="dim">—</span>':fmt.sn(p.mark))}${!closed&&p.mark_date?`<div class="legs">${fmt.date(p.mark_date)}</div>`:''}</td>
     <td class="r num ${pnlCls}"><b>${fmt.susd(p.pnl)}</b><div class="legs ${pnlCls}">${fmt.spct(p.pnl_pct)}</div></td>
-    ${closed?`<td><span class="tag ${p.status}">${p.status.replace('_',' ')}</span></td><td class="num muted">${fmt.date(p.entry_date)} → ${fmt.date(p.exit_date)}<div class="legs">${p.held_days}d held</div></td>`
-            :`<td class="num">${fmt.sn(p.stop_level)}${stopBar(p)}</td><td class="r num">${p.dte}d<div class="legs">exit by ${fmt.date(p.force_close_date)}</div></td><td class="muted" style="white-space:normal;max-width:360px">${p.rationale||''}</td>`}
+    ${closed?`<td><span class="tag ${p.status}">${p.status.replace('_',' ')}</span></td><td class="num muted" style="white-space:normal;min-width:110px">${fmt.date(p.entry_date)} → ${fmt.date(p.exit_date)}<div class="legs">${p.held_days}d held</div></td>`
+            :`<td class="num">${fmt.sn(p.stop_level)}${stopBar(p)}</td><td class="r num">${p.dte}d<div class="legs">exit by ${fmt.date(p.force_close_date)}</div></td><td class="why">${p.rationale||''}</td>`}
   </tr>`;
 }
 function renderPositions(open,closed){

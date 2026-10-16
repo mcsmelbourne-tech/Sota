@@ -95,6 +95,11 @@ The structure of the paper is implemented as fixed code: the 10 option-implied f
 strategy families, the contract/size/hedge resolvers, the risk limits, the exits, and the eight
 metrics. The strategy *selector* is a separate piece that you can change.
 
+![The cockpit: account numbers, equity curve, the forward-test rules, open positions with the LLM's reason for each trade, closed trades, a daily activity log and the 10 market features.](docs/cockpit.png)
+
+*The web page (`uv run sota web`). The numbers in this picture are from a replay of the recorded
+holdout trades, Oct 2025 to May 2026, not from a live account.*
+
 Three modes:
 
 | mode | data | execution |

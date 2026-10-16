@@ -55,6 +55,8 @@ def position_view(p: Position) -> dict[str, Any]:
         if value is not None and p.entry_premium
         else None
     )
+    # "now" for an open position is the last run that marked it, so a stale journal reads correctly
+    asof = date.fromisoformat(p.tags["mark_date"]) if "mark_date" in p.tags else date.today()
     d.update(
         label=f"{pkg.family} {pkg.side.value} {pkg.tenor.value}",
         legs=[
@@ -68,8 +70,8 @@ def position_view(p: Position) -> dict[str, Any]:
         pnl=pnl,
         pnl_pct=pnl_pct,
         stop_level=p.entry_premium - p.stop_loss_per_share,
-        dte=(pkg.expiry - date.today()).days,
-        held_days=((p.exit_date or date.today()) - p.entry_date).days,
+        dte=(pkg.expiry - asof).days,
+        held_days=((p.exit_date or asof) - p.entry_date).days,
         max_loss_total=None if pkg.max_loss is None else pkg.max_loss * MULTIPLIER * p.units,
         rationale=p.tags.get("rationale", ""),
     )
